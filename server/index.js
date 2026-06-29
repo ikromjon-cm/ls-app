@@ -80,6 +80,10 @@ function asyncHandler(fn) {
 
 db.initDB?.()
 
+// ───── Health Check (no auth) ─────
+app.get('/api/health', (_, res) => res.json({ success: true, message: 'OK', data: { status: 'healthy', uptime: process.uptime() }, errors: [] }))
+app.get('/health', (_, res) => res.json({ success: true, message: 'OK', data: { status: 'healthy', uptime: process.uptime() }, errors: [] }))
+
 // ───── Auth Routes ─────
 app.post('/api/auth/login', asyncHandler(async (req, res) => {
   const { login, password } = req.body
@@ -371,9 +375,6 @@ app.get('/api/student/portal', asyncHandler((req, res) => {
 
 // ───── Devices (Super Admin) ─────
 app.get('/api/devices', authorize('superadmin'), asyncHandler((req, res) => ok(res, db.getDevices(req.query))))
-
-// ───── Health Check ─────
-app.get('/api/health', (_, res) => res.json({ success: true, message: 'OK', data: { status: 'healthy', uptime: process.uptime() }, errors: [] }))
 
 // ───── Serve Frontend ─────
 if (existsSync(distPath)) {
