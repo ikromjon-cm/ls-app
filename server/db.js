@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url'
 import bcrypt from 'bcrypt'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const DB_PATH = join(__dirname, 'crm.json')
+const DB_PATH = process.env.DB_PATH || join(__dirname, 'crm.json')
 
 function read() {
   if (!existsSync(DB_PATH)) return null
@@ -618,7 +618,7 @@ export function getGradeStats(studentId) {
   const subjects = {}
   for (const g of grades) {
     if (!subjects[g.subject]) subjects[g.subject] = []
-    subjects[g.subject].push(g.score)
+    subjects[g.subject].push(g.grade || g.score)
   }
   const result = []
   for (const [subject, scores] of Object.entries(subjects)) {
