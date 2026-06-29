@@ -1,4 +1,4 @@
-import { verifyAccessToken, hasPermission } from '../core/auth/auth.service.js'
+import { verifyAccessToken, hasPermission } from '../../core/auth/auth.service.js'
 
 export function authenticate(req, res, next) {
   const authHeader = req.headers.authorization

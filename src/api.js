@@ -55,6 +55,7 @@ async function request(url, options = {}) {
 }
 
 export const api = {
+  request,
   login: (login, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ login, password }) }),
   refresh: () => request('/auth/refresh', { method: 'POST', body: JSON.stringify({ refreshToken }) }),
   getDashboard: () => request('/dashboard'),
@@ -105,7 +106,36 @@ export const api = {
   getReports: (params) => request(`/reports?${new URLSearchParams(params || {})}`),
   getNotifications: () => request('/notifications'),
   markNotificationRead: (id) => request(`/notifications/${id}/read`, { method: 'PUT' }),
+  getHomework: (params) => request(`/homework?${new URLSearchParams(params || {})}`),
+  getGrades: (params) => request(`/grades?${new URLSearchParams(params || {})}`),
+  getMessages: (params) => request(`/messages?${new URLSearchParams(params || {})}`),
+  sendMessage: (data) => request('/messages', { method: 'POST', body: JSON.stringify(data) }),
   getTeachers: () => request('/teachers'),
   getSettings: () => request('/settings'),
   updateSettings: (data) => request('/settings', { method: 'PUT', body: JSON.stringify(data) }),
+  // Homework
+  getHomework: (params) => request(`/homework?${new URLSearchParams(params || {})}`),
+  createHomework: (data) => request('/homework', { method: 'POST', body: JSON.stringify(data) }),
+  deleteHomework: (id) => request(`/homework/${id}`, { method: 'DELETE' }),
+  // Grades
+  getGrades: (params) => request(`/grades?${new URLSearchParams(params || {})}`),
+  createGrade: (data) => request('/grades', { method: 'POST', body: JSON.stringify(data) }),
+  // Schedule
+  getSchedule: (params) => request(`/schedule?${new URLSearchParams(params || {})}`),
+  createSchedule: (data) => request('/schedule', { method: 'POST', body: JSON.stringify(data) }),
+  deleteSchedule: (id) => request(`/schedule/${id}`, { method: 'DELETE' }),
+  // Library
+  getBooks: (params) => request(`/library?${new URLSearchParams(params || {})}`),
+  createBook: (data) => request('/library', { method: 'POST', body: JSON.stringify(data) }),
+  deleteBook: (id) => request(`/library/${id}`, { method: 'DELETE' }),
+  // Exams
+  getExams: (params) => request(`/exams?${new URLSearchParams(params || {})}`),
+  createExam: (data) => request('/exams', { method: 'POST', body: JSON.stringify(data) }),
+  getExamResults: (params) => request(`/exam-results?${new URLSearchParams(params || {})}`),
+  // Certificates
+  getCertificates: (params) => request(`/certificates?${new URLSearchParams(params || {})}`),
+  createCertificate: (data) => request('/certificates', { method: 'POST', body: JSON.stringify(data) }),
+  // Payment providers config
+  getPaymentProviders: () => request('/payments/providers/config'),
+  updatePaymentProvider: (provider, data) => request(`/payments/providers/config/${provider}`, { method: 'PUT', body: JSON.stringify(data) }),
 }

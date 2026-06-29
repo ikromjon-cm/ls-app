@@ -13,29 +13,29 @@ export function comparePassword(password, hash) {
   return bcrypt.compareSync(password, hash)
 }
 
-export function generateAccessToken(payload) {
+export function generateAccessToken(payload: Record<string, any>) {
   return jwt.sign({ ...payload, type: 'access' }, env.JWT_SECRET, {
-    expiresIn: env.JWT_EXPIRES_IN,
+    expiresIn: env.JWT_EXPIRES_IN as any,
   })
 }
 
-export function generateRefreshToken(payload) {
+export function generateRefreshToken(payload: Record<string, any>) {
   return jwt.sign({ ...payload, type: 'refresh' }, env.JWT_REFRESH_SECRET, {
-    expiresIn: env.JWT_REFRESH_EXPIRES_IN,
+    expiresIn: env.JWT_REFRESH_EXPIRES_IN as any,
   })
 }
 
-export function verifyAccessToken(token) {
+export function verifyAccessToken(token: string) {
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET)
+    const decoded = jwt.verify(token, env.JWT_SECRET) as Record<string, any>
     if (decoded.type !== 'access') return null
     return decoded
   } catch { return null }
 }
 
-export function verifyRefreshToken(token) {
+export function verifyRefreshToken(token: string) {
   try {
-    const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET)
+    const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET) as Record<string, any>
     if (decoded.type !== 'refresh') return null
     return decoded
   } catch { return null }

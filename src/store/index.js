@@ -35,15 +35,15 @@ export const useAppStore = create((set, get) => ({
     set({ loading: true })
     try {
       const [students, groups, payments, expenses, attendance, homework, grades, messages, notifications] = await Promise.all([
-        api.request('/students', {}),
-        api.request('/groups', {}),
-        api.request('/payments', {}),
-        api.request('/expenses', {}),
-        api.request('/attendance', {}),
-        api.request('/homework', {}),
-        api.request('/grades', {}),
-        api.request('/messages', {}),
-        api.request('/notifications', {}),
+        api.getStudents({}).catch(() => []),
+        api.getGroups().catch(() => []),
+        api.getPayments({}).catch(() => []),
+        api.getExpenses({}).catch(() => []),
+        api.getAttendance({}).catch(() => []),
+        api.getHomework ? api.getHomework({}).catch(() => []) : [],
+        api.getGrades ? api.getGrades({}).catch(() => []) : [],
+        api.getMessages ? api.getMessages({}).catch(() => []) : [],
+        api.getNotifications().catch(() => []),
       ])
       set({
         students: Array.isArray(students) ? students : [],

@@ -25,18 +25,18 @@ export function setupSocketIO(httpServer) {
     const payload = verifyAccessToken(token)
     if (!payload) return next(new Error('Yaroqsiz token'))
 
-    socket.user = payload
-    socket.join(`org:${payload.organizationId}`)
-    socket.join(`user:${payload.userId}`)
+    ;(socket as any).user = payload
+    socket.join(`org:${(payload as any).organizationId}`)
+    socket.join(`user:${(payload as any).userId}`)
 
-    await redis.sadd(`online:${payload.organizationId}`, payload.userId)
-    io.to(`org:${payload.organizationId}`).emit('user:online', { userId: payload.userId })
+    await redis.sadd(`online:${(payload as any).organizationId}`, (payload as any).userId)
+    io.to(`org:${(payload as any).organizationId}`).emit('user:online', { userId: (payload as any).userId })
 
     next()
   })
 
   io.on('connection', (socket) => {
-    const user = socket.user
+    const user = (socket as any).user as Record<string, any>
     console.log(`[Socket] ${user.userId} (${user.role}) connected`)
 
     socket.on('join:chat', ({ otherId }) => {

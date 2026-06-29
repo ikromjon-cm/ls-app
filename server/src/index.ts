@@ -133,7 +133,7 @@ app.post('/api/auth/refresh', asyncHandler(async (req, res) => {
   if (!refreshToken) return fail(res, 400, 'Refresh token talab qilinadi')
   const payload = verifyRefreshToken(refreshToken)
   if (!payload) return fail(res, 401, 'Yaroqsiz refresh token')
-  const user = await prisma.user.findUnique({ where: { id: payload.userId } })
+  const user = await prisma.user.findUnique({ where: { id: (payload as any).userId } })
   if (!user) return fail(res, 404, 'Foydalanuvchi topilmadi')
   const newPayload = { userId: user.id, organizationId: user.organizationId, role: user.role }
   const newToken = generateAccessToken(newPayload)
@@ -403,10 +403,10 @@ app.delete('/api/expenses/:id', authorize('super_admin', 'org_admin'), asyncHand
 
 // ───── Attendance ─────
 app.get('/api/attendance', authorize('super_admin', 'org_admin', 'teacher'), asyncHandler(async (req, res) => {
-  const where = { organizationId: req.user.organizationId }
-  if (req.query.date) where.date = new Date(req.query.date)
+  const where: any = { organizationId: (req as any).user.organizationId }
+  if (req.query.date) where.date = new Date(req.query.date as string)
   if (req.query.groupId) {
-    const students = await prisma.student.findMany({ where: { groupId: req.query.groupId }, select: { id: true } })
+    const students = await prisma.student.findMany({ where: { groupId: req.query.groupId as string }, select: { id: true } })
     where.studentId = { in: students.map(s => s.id) }
   }
   const attendance = await prisma.attendance.findMany({ where, include: { student: { select: { name: true } } } })
@@ -441,11 +441,11 @@ app.put('/api/notifications/:id/read', asyncHandler(async (req, res) => {
 
 // ───── Messages ─────
 app.get('/api/messages', asyncHandler(async (req, res) => {
-  const where = { organizationId: req.user.organizationId }
+  const where: any = { organizationId: (req as any).user.organizationId }
   if (req.query.otherId) {
     where.OR = [
-      { senderId: req.user.userId, receiverId: req.query.otherId },
-      { senderId: req.query.otherId, receiverId: req.user.userId },
+      { senderId: (req as any).user.userId, receiverId: req.query.otherId as string },
+      { senderId: req.query.otherId as string, receiverId: (req as any).user.userId },
     ]
   }
   const messages = await prisma.message.findMany({ where, orderBy: { createdAt: 'asc' } })
@@ -465,6 +465,235 @@ app.post('/api/messages', asyncHandler(async (req, res) => {
     io.to(`chat:${roomId}`).emit('message:new', { ...msg, senderName: req.user.name, senderRole: req.user.role })
   } catch {}
   created(res, msg, 'Xabar yuborildi')
+}))
+
+// ───── Homework ─────
+app.get('/api/homework', asyncHandler(async (req, res) => {
+  const where: any = { organizationId: (req as any).user.organizationId }
+  if (req.query.groupId) where.groupId = req.query.groupId as string
+  const homework = await prisma.homework.findMany({ where, orderBy: { createdAt: 'desc' } })
+  ok(res, homework)
+}))
+
+app.post('/api/homework', authorize('super_admin', 'org_admin', 'teacher'), asyncHandler(async (req, res) => {
+  const { groupId, title, description, deadline, files } = req.body
+  const hw = await prisma.homework.create({
+    data: { organizationId: (req as any).user.organizationId, groupId, title, description, deadline: deadline ? new Date(deadline) : null, files: files || [] },
+  })
+  created(res, hw, 'Topshiriq yaratildi')
+}))
+
+app.delete('/api/homework/:id', authorize('super_admin', 'org_admin', 'teacher'), asyncHandler(async (req, res) => {
+  await prisma.homework.delete({ where: { id: req.params.id } })
+  ok(res, null, "Topshiriq o'chirildi")
+}))
+
+// ───── Grades ─────
+app.get('/api/grades', asyncHandler(async (req, res) => {
+  const where: any = { organizationId: (req as any).user.organizationId }
+  if (req.query.studentId) where.studentId = req.query.studentId as string
+  if (req.query.subject) where.subject = req.query.subject as string
+  const grades = await prisma.grade.findMany({ where, orderBy: { createdAt: 'desc' } })
+  ok(res, grades)
+}))
+
+app.post('/api/grades', authorize('super_admin', 'org_admin', 'teacher'), asyncHandler(async (req, res) => {
+  const { studentId, subject, score } = req.body
+  const grade = await prisma.grade.create({
+    data: { organizationId: (req as any).user.organizationId, studentId, subject, score: Number(score), createdById: (req as any).user.userId },
+  })
+  created(res, grade, 'Baho qo\'yildi')
+}))
+
+// ───── Schedule ─────
+app.get('/api/schedule', asyncHandler(async (req, res) => {
+  const where: any = { organizationId: (req as any).user.organizationId }
+  if (req.query.groupId) where.groupId = req.query.groupId as string
+  if (req.query.day) where.day = req.query.day as string
+  const schedule = await prisma.scheduleEntry.findMany({ where, orderBy: [{ day: 'asc' }, { timeStart: 'asc' }] })
+  ok(res, schedule)
+}))
+
+app.post('/api/schedule', authorize('super_admin', 'org_admin'), asyncHandler(async (req, res) => {
+  const { groupId, subject, teacherId, day, timeStart, timeEnd, room } = req.body
+  const entry = await prisma.scheduleEntry.create({
+    data: { organizationId: (req as any).user.organizationId, groupId, subject, teacherId, day, timeStart, timeEnd, room, createdById: (req as any).user.userId },
+  })
+  created(res, entry, 'Dars qo\'shildi')
+}))
+
+app.delete('/api/schedule/:id', authorize('super_admin', 'org_admin'), asyncHandler(async (req, res) => {
+  await prisma.scheduleEntry.delete({ where: { id: req.params.id } })
+  ok(res, null, "Dars o'chirildi")
+}))
+
+// ───── Library ─────
+app.get('/api/library', asyncHandler(async (req, res) => {
+  const where: any = { organizationId: (req as any).user.organizationId }
+  if (req.query.search) {
+    where.OR = [
+      { title: { contains: req.query.search as string, mode: 'insensitive' } },
+      { author: { contains: req.query.search as string, mode: 'insensitive' } },
+    ]
+  }
+  const books = await prisma.book.findMany({ where, orderBy: { createdAt: 'desc' } })
+  ok(res, books)
+}))
+
+app.post('/api/library', authorize('super_admin', 'org_admin'), asyncHandler(async (req, res) => {
+  const { title, author, category, fileUrl, description } = req.body
+  const book = await prisma.book.create({
+    data: { organizationId: (req as any).user.organizationId, title, author, category, fileUrl, description, createdById: (req as any).user.userId },
+  })
+  created(res, book, 'Kitob qo\'shildi')
+}))
+
+app.delete('/api/library/:id', authorize('super_admin', 'org_admin'), asyncHandler(async (req, res) => {
+  await prisma.book.delete({ where: { id: req.params.id } })
+  ok(res, null, "Kitob o'chirildi")
+}))
+
+// ───── Exams ─────
+app.get('/api/exams', asyncHandler(async (req, res) => {
+  const where: any = { organizationId: (req as any).user.organizationId }
+  if (req.query.groupId) where.groupId = req.query.groupId as string
+  const exams = await prisma.exam.findMany({ where, orderBy: { createdAt: 'desc' } })
+  ok(res, exams)
+}))
+
+app.post('/api/exams', authorize('super_admin', 'org_admin', 'teacher'), asyncHandler(async (req, res) => {
+  const { groupId, title, questions, timeLimit, maxScore, date } = req.body
+  const exam = await prisma.exam.create({
+    data: { organizationId: (req as any).user.organizationId, groupId, title, questions: questions || [], timeLimit: timeLimit ? Number(timeLimit) : null, maxScore: maxScore ? Number(maxScore) : null, date: date ? new Date(date) : null, createdById: (req as any).user.userId },
+  })
+  created(res, exam, 'Imtihon yaratildi')
+}))
+
+app.get('/api/exam-results', asyncHandler(async (req, res) => {
+  const where: any = {}
+  if (req.query.examId) where.examId = req.query.examId as string
+  if (req.query.studentId) where.studentId = req.query.studentId as string
+  const results = await prisma.examResult.findMany({ where, orderBy: { submittedAt: 'desc' } })
+  ok(res, results)
+}))
+
+// ───── Certificates ─────
+app.get('/api/certificates', asyncHandler(async (req, res) => {
+  const where: any = { organizationId: (req as any).user.organizationId }
+  if (req.query.studentId) where.studentId = req.query.studentId as string
+  const certificates = await prisma.certificate.findMany({ where, orderBy: { issuedAt: 'desc' } })
+  ok(res, certificates)
+}))
+
+app.post('/api/certificates', authorize('super_admin', 'org_admin'), asyncHandler(async (req, res) => {
+  const { studentId, studentName, type, certificateNumber, issueDate, description } = req.body
+  const cert = await prisma.certificate.create({
+    data: { organizationId: (req as any).user.organizationId, studentId, studentName, type: type || 'completion', certificateNumber, issueDate: issueDate ? new Date(issueDate) : null, description, issuedById: (req as any).user.userId, issuedByName: (req as any).user.name },
+  })
+  created(res, cert, 'Sertifikat berildi')
+}))
+
+// ───── Audit Logs ─────
+app.get('/api/audit-logs', authorize('super_admin', 'org_admin'), asyncHandler(async (req, res) => {
+  const where: any = { organizationId: (req as any).user.organizationId }
+  if (req.query.type) where.type = req.query.type as string
+  if (req.query.userId) where.userId = req.query.userId as string
+  if (req.query.startDate || req.query.endDate) {
+    where.createdAt = {}
+    if (req.query.startDate) where.createdAt.gte = new Date(req.query.startDate as string)
+    if (req.query.endDate) where.createdAt.lte = new Date(req.query.endDate as string)
+  }
+  const logs = await prisma.auditLog.findMany({ where, orderBy: { createdAt: 'desc' }, take: 500 })
+  ok(res, logs)
+}))
+
+// ───── Reports ─────
+app.get('/api/reports', authorize('super_admin', 'org_admin'), asyncHandler(async (req, res) => {
+  const orgId = (req as any).user.organizationId
+  const year = req.query.year ? Number(req.query.year) : new Date().getFullYear()
+  const [payments, expenses] = await Promise.all([
+    prisma.payment.findMany({ where: { organizationId: orgId, date: { gte: new Date(`${year}-01-01`), lte: new Date(`${year}-12-31`) } } }),
+    prisma.expense.findMany({ where: { organizationId: orgId, date: { gte: new Date(`${year}-01-01`), lte: new Date(`${year}-12-31`) } } }),
+  ])
+  const months = []
+  for (let m = 0; m < 12; m++) {
+    const monthPayments = payments.filter(p => p.date.getMonth() === m)
+    const monthExpenses = expenses.filter(e => e.date.getMonth() === m)
+    months.push({
+      month: m + 1,
+      monthName: ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'][m],
+      revenue: monthPayments.reduce((s, p) => s + p.amount, 0),
+      expense: monthExpenses.reduce((s, e) => s + e.amount, 0),
+      paymentCount: monthPayments.length,
+      expenseCount: monthExpenses.length,
+    })
+  }
+  ok(res, {
+    year, months,
+    totalRevenue: payments.reduce((s, p) => s + p.amount, 0),
+    totalExpense: expenses.reduce((s, e) => s + e.amount, 0),
+    netProfit: payments.reduce((s, p) => s + p.amount, 0) - expenses.reduce((s, e) => s + e.amount, 0),
+  })
+}))
+
+// ───── Teachers ─────
+app.get('/api/teachers', asyncHandler(async (req, res) => {
+  const teachers = await prisma.user.findMany({
+    where: { organizationId: (req as any).user.organizationId, role: 'teacher' },
+    select: { id: true, name: true, role: true, phone: true, email: true, avatar: true },
+    orderBy: { name: 'asc' },
+  })
+  ok(res, teachers)
+}))
+
+// ───── Settings ─────
+app.get('/api/settings', authorize('super_admin', 'org_admin'), asyncHandler(async (req, res) => {
+  const org = await prisma.organization.findUnique({
+    where: { id: (req as any).user.organizationId },
+    select: { settings: true, name: true, slug: true, plan: true, logo: true },
+  })
+  ok(res, org || { settings: {} })
+}))
+
+app.put('/api/settings', authorize('super_admin', 'org_admin'), asyncHandler(async (req, res) => {
+  const org = await prisma.organization.update({
+    where: { id: (req as any).user.organizationId },
+    data: { settings: req.body },
+  })
+  ok(res, org.settings, 'Sozlamalar saqlandi')
+}))
+
+// ───── Payment Providers Config ─────
+app.get('/api/payments/providers/config', authorize('super_admin', 'org_admin'), asyncHandler(async (req, res) => {
+  const org = await prisma.organization.findUnique({
+    where: { id: (req as any).user.organizationId },
+    select: { settings: true },
+  })
+  const providers = (org?.settings as any)?.paymentProviders || {}
+  ok(res, providers)
+}))
+
+app.put('/api/payments/providers/config/:provider', authorize('super_admin', 'org_admin'), asyncHandler(async (req, res) => {
+  const org = await prisma.organization.findUnique({ where: { id: (req as any).user.organizationId } })
+  const settings = (org?.settings as any) || {}
+  settings.paymentProviders = settings.paymentProviders || {}
+  settings.paymentProviders[req.params.provider] = req.body
+  await prisma.organization.update({
+    where: { id: (req as any).user.organizationId },
+    data: { settings },
+  })
+  ok(res, settings.paymentProviders, 'Provider sozlandi')
+}))
+
+// ───── Parent Portal ─────
+app.get('/api/parent/children', asyncHandler(async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { id: (req as any).user.userId } })
+  if (!user) return fail(res, 404, 'Foydalanuvchi topilmadi')
+  const students = await prisma.student.findMany({
+    where: { organizationId: (req as any).user.organizationId, parentPhone: user.phone },
+    include: { group: { select: { name: true, teacherName: true } } },
+  })
+  ok(res, students.map(s => ({ ...s, groupName: s.group?.name || 'N/A', teacherName: s.group?.teacherName || 'N/A', group: undefined })))
 }))
 
 // ───── SPA ─────

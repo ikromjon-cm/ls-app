@@ -6,6 +6,7 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/otp_screen.dart';
 import '../../features/parent/presentation/parent_shell.dart';
 import '../../features/student/presentation/student_shell.dart';
+import '../../features/student/presentation/student_home_screen.dart';
 import '../../features/parent/presentation/dashboard/parent_dashboard_screen.dart';
 import '../../features/parent/presentation/children/parent_children_screen.dart';
 import '../../features/parent/presentation/payments/parent_payments_screen.dart';

@@ -49,7 +49,7 @@ class ApiClient {
       await _storage.write(key: 'access_token', value: response.data['data']['token']);
       await _storage.write(key: 'refresh_token', value: response.data['data']['refreshToken']);
       return true;
-    } catch {
+    } catch (_) {
       await _storage.deleteAll();
       return false;
     }
