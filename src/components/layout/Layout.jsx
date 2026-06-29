@@ -16,11 +16,15 @@ const Reports = lazy(() => import('../reports/Reports'))
 const Audit = lazy(() => import('../audit/AuditLogs'))
 const Notifications = lazy(() => import('../notifications/NotificationPage'))
 const Settings = lazy(() => import('../settings/Settings'))
+const Chat = lazy(() => import('../chat/Chat'))
+const Homework = lazy(() => import('../homework/Homework'))
+const Grades = lazy(() => import('../grades/Grades'))
+const Schedule = lazy(() => import('../schedule/Schedule'))
 
 const ROLE_PAGES = {
-  superadmin: ['dashboard', 'groups', 'students', 'payments', 'expenses', 'attendance', 'teachers', 'reports', 'audit', 'notifications', 'settings'],
-  admin: ['dashboard', 'groups', 'students', 'payments', 'expenses', 'attendance', 'teachers', 'reports', 'audit', 'notifications'],
-  teacher: ['dashboard', 'attendance'],
+  superadmin: ['dashboard', 'groups', 'students', 'payments', 'expenses', 'attendance', 'teachers', 'reports', 'audit', 'notifications', 'settings', 'chat', 'homework', 'grades', 'schedule'],
+  admin: ['dashboard', 'groups', 'students', 'payments', 'expenses', 'attendance', 'teachers', 'reports', 'audit', 'notifications', 'chat', 'homework', 'grades', 'schedule'],
+  teacher: ['dashboard', 'attendance', 'homework', 'grades', 'schedule', 'chat'],
 }
 
 function PageFallback({ title }) {
@@ -44,6 +48,10 @@ const pages = {
   audit: Audit,
   notifications: Notifications,
   settings: Settings,
+  chat: Chat,
+  homework: Homework,
+  grades: Grades,
+  schedule: Schedule,
 }
 
 const pageTitles = {
@@ -58,6 +66,10 @@ const pageTitles = {
   audit: 'Audit Log',
   notifications: 'Xabarnomalar',
   settings: 'Sozlamalar',
+  chat: 'Xabarlar',
+  homework: 'Topshiriqlar',
+  grades: 'Baholar',
+  schedule: 'Dars jadvali',
 }
 
 export default function Layout() {

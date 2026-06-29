@@ -13,6 +13,10 @@ import {
   ScrollText,
   Settings,
   Bell,
+  MessageSquare,
+  BookOpen,
+  Award,
+  Calendar,
 } from 'lucide-react'
 
 const allMenuItems = [
@@ -23,6 +27,10 @@ const allMenuItems = [
   { id: 'expenses', label: 'Xarajatlar', icon: Wallet, roles: ['superadmin', 'admin'] },
   { id: 'attendance', label: 'Davomat', icon: CalendarCheck, roles: ['superadmin', 'admin', 'teacher'] },
   { id: 'teachers', label: "O'qituvchilar", icon: Presentation, roles: ['superadmin', 'admin'] },
+  { id: 'chat', label: 'Xabarlar', icon: MessageSquare, roles: ['superadmin', 'admin', 'teacher'] },
+  { id: 'homework', label: 'Topshiriqlar', icon: BookOpen, roles: ['superadmin', 'admin', 'teacher'] },
+  { id: 'grades', label: 'Baholar', icon: Award, roles: ['superadmin', 'admin', 'teacher'] },
+  { id: 'schedule', label: 'Dars jadvali', icon: Calendar, roles: ['superadmin', 'admin', 'teacher'] },
   { id: 'reports', label: 'Hisobotlar', icon: BarChart3, roles: ['superadmin', 'admin'] },
   { id: 'audit', label: 'Audit Log', icon: ScrollText, roles: ['superadmin'] },
   { id: 'notifications', label: 'Xabarnomalar', icon: Bell, roles: ['superadmin', 'admin'] },
