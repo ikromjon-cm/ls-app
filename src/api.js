@@ -12,56 +12,71 @@ export function setTokens(token, rt) {
 export function clearTokens() { setTokens(null, null) }
 export function getToken() { return authToken }
 
+function extractData(res) {
+  // Handle both new {success, message, data, errors} and legacy formats
+  if (res.success === true && res.data !== undefined) return res.data
+  if (res.success === false) throw new Error(res.message || 'Server error')
+  return res // legacy fallback for raw array responses
+}
+
 async function request(url, options = {}) {
   const headers = { 'Content-Type': 'application/json' }
   if (authToken) headers['Authorization'] = `Bearer ${authToken}`
-  const res = await fetch(`${BASE}${url}`, { headers, ...options })
+  let res = await fetch(`${BASE}${url}`, { headers, ...options })
   if (res.status === 401) {
     if (refreshToken) {
-      const r = await fetch(`${BASE}/auth/refresh`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken }) })
+      const r = await fetch(`${BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken })
+      })
       if (r.ok) {
         const data = await r.json()
-        setTokens(data.token, data.refreshToken)
-        headers['Authorization'] = `Bearer ${data.token}`
-        const retry = await fetch(`${BASE}${url}`, { headers, ...options })
-        if (!retry.ok) throw new Error((await retry.json().catch(() => ({}))).error || 'Request failed')
-        return retry.json()
+        const body = extractData(data)
+        setTokens(body.token, body.refreshToken)
+        headers['Authorization'] = `Bearer ${body.token}`
+        res = await fetch(`${BASE}${url}`, { headers, ...options })
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}))
+          throw new Error(errData.message || 'So\'rov bajarilmadi')
+        }
+        return extractData(await res.json())
       }
     }
     clearTokens()
-    throw new Error('Unauthorized')
+    window.dispatchEvent(new CustomEvent('auth:logout'))
+    throw new Error('Sessiya tugadi. Qayta kiring.')
   }
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Server error')
-  return res.json()
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}))
+    throw new Error(errData.message || 'Server xatoligi')
+  }
+  return extractData(await res.json())
 }
 
 export const api = {
-  // Auth
   login: (login, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ login, password }) }),
-
-  // Dashboard
+  refresh: () => request('/auth/refresh', { method: 'POST', body: JSON.stringify({ refreshToken }) }),
   getDashboard: () => request('/dashboard'),
-
-  // Users
   getUsers: (role) => request(`/users${role ? `?role=${role}` : ''}`),
   createUser: (data) => request('/users', { method: 'POST', body: JSON.stringify(data) }),
   updateUser: (id, data) => request(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteUser: (id) => request(`/users/${id}`, { method: 'DELETE' }),
-
-  // Groups
   getGroups: () => request('/groups'),
   createGroup: (data) => request('/groups', { method: 'POST', body: JSON.stringify(data) }),
   updateGroup: (id, data) => request(`/groups/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteGroup: (id) => request(`/groups/${id}`, { method: 'DELETE' }),
-
-  // Students
   getStudents: (params) => request(`/students?${new URLSearchParams(params)}`),
   createStudent: (data) => {
     if (data.avatar instanceof File) {
       const form = new FormData()
       Object.entries(data).forEach(([k, v]) => { if (v !== undefined && v !== null) form.append(k, v) })
-      const headers = { Authorization: `Bearer ${authToken}` }
-      return fetch(`${BASE}/students`, { method: 'POST', headers, body: form }).then(async r => { if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Server error'); return r.json() })
+      return fetch(`${BASE}/students`, {
+        method: 'POST', headers: { Authorization: `Bearer ${authToken}` }, body: form
+      }).then(async r => {
+        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message || 'Server error')
+        return extractData(await r.json())
+      })
     }
     return request('/students', { method: 'POST', body: JSON.stringify(data) })
   },
@@ -69,40 +84,28 @@ export const api = {
     if (data.avatar instanceof File) {
       const form = new FormData()
       Object.entries(data).forEach(([k, v]) => { if (v !== undefined && v !== null) form.append(k, v) })
-      const headers = { Authorization: `Bearer ${authToken}` }
-      return fetch(`${BASE}/students/${id}`, { method: 'PUT', headers, body: form }).then(async r => { if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Server error'); return r.json() })
+      return fetch(`${BASE}/students/${id}`, {
+        method: 'PUT', headers: { Authorization: `Bearer ${authToken}` }, body: form
+      }).then(async r => {
+        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message || 'Server error')
+        return extractData(await r.json())
+      })
     }
     return request(`/students/${id}`, { method: 'PUT', body: JSON.stringify(data) })
   },
   deleteStudent: (id) => request(`/students/${id}`, { method: 'DELETE' }),
-
-  // Payments
   getPayments: (params) => request(`/payments?${new URLSearchParams(params || {})}`),
   createPayment: (data) => request('/payments', { method: 'POST', body: JSON.stringify(data) }),
-
-  // Expenses
   getExpenses: (params) => request(`/expenses?${new URLSearchParams(params || {})}`),
   createExpense: (data) => request('/expenses', { method: 'POST', body: JSON.stringify(data) }),
   deleteExpense: (id) => request(`/expenses/${id}`, { method: 'DELETE' }),
-
-  // Attendance
   markAttendance: (data) => request('/attendance', { method: 'POST', body: JSON.stringify(data) }),
   getAttendance: (params) => request(`/attendance?${new URLSearchParams(params || {})}`),
-
-  // Audit Logs
   getAuditLogs: (params) => request(`/audit-logs?${new URLSearchParams(params || {})}`),
-
-  // Reports
   getReports: (params) => request(`/reports?${new URLSearchParams(params || {})}`),
-
-  // Notifications
   getNotifications: () => request('/notifications'),
   markNotificationRead: (id) => request(`/notifications/${id}/read`, { method: 'PUT' }),
-
-  // Teachers
   getTeachers: () => request('/teachers'),
-
-  // Settings
   getSettings: () => request('/settings'),
   updateSettings: (data) => request('/settings', { method: 'PUT', body: JSON.stringify(data) }),
 }

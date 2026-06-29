@@ -1,14 +1,9 @@
-import { createContext, useContext, useReducer, useEffect } from 'react'
+import { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
 import { api, setTokens, clearTokens, getToken } from '../api'
 
 const AuthContext = createContext()
 
-const initialState = {
-  user: null,
-  token: null,
-  loading: true,
-  error: null,
-}
+const initialState = { user: null, token: null, loading: true, error: null }
 
 function reducer(state, action) {
   switch (action.type) {
@@ -30,20 +25,36 @@ function reducer(state, action) {
 export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState)
 
-  useEffect(() => {
+  const validateSession = useCallback(async () => {
     const token = getToken()
-    if (token) {
+    if (!token) {
+      dispatch({ type: 'SET_LOADING', loading: false })
+      return
+    }
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      if (payload.exp * 1000 <= Date.now()) {
+        clearTokens()
+        dispatch({ type: 'SET_LOADING', loading: false })
+        return
+      }
+      // Try to restore session with API call
       try {
-        const payload = JSON.parse(atob(token.split('.')[1]))
-        if (payload.exp * 1000 > Date.now()) {
+        const data = await api.getDashboard().catch(() => null)
+        if (data) {
           dispatch({ type: 'SET_USER', user: payload })
           return
         }
       } catch {}
+      // Fallback: use JWT payload for basic info
+      dispatch({ type: 'SET_USER', user: { id: payload.id, role: payload.role, name: payload.name, login: payload.login } })
+    } catch {
       clearTokens()
+      dispatch({ type: 'SET_LOADING', loading: false })
     }
-    dispatch({ type: 'SET_LOADING', loading: false })
   }, [])
+
+  useEffect(() => { validateSession() }, [validateSession])
 
   const login = async (login, password) => {
     dispatch({ type: 'SET_LOADING', loading: true })
@@ -58,10 +69,17 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const logout = () => {
+  const logout = useCallback(() => {
     clearTokens()
     dispatch({ type: 'LOGOUT' })
-  }
+  }, [])
+
+  // Listen for forced logout from api.js
+  useEffect(() => {
+    const handler = () => logout()
+    window.addEventListener('auth:logout', handler)
+    return () => window.removeEventListener('auth:logout', handler)
+  }, [logout])
 
   const hasRole = (...roles) => state.user && roles.includes(state.user.role)
 

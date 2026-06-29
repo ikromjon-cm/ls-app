@@ -1,323 +1,406 @@
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
+import compression from 'compression'
+import morgan from 'morgan'
+import rateLimit from 'express-rate-limit'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { existsSync } from 'fs'
+import { existsSync, mkdirSync } from 'fs'
 import multer from 'multer'
 import { authenticate, authorize, generateToken, generateRefreshToken, verifyToken } from './middleware/auth.js'
 import * as db from './db.js'
+import { writeFileSync, appendFileSync } from 'fs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const distPath = join(__dirname, '..', 'dist')
 
 const app = express()
-app.use(cors())
-app.use(express.json({ limit: '50mb' }))
+
+// ───── Security ─────
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: false,
+}))
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}))
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Ko\'p so\'rov yuborildi, keyinroq urinib ko\'ring', errors: ['RATE_LIMIT'] },
+}))
+
+// ───── Request Logging ─────
+const logDir = join(__dirname, 'logs')
+if (!existsSync(logDir)) mkdirSync(logDir)
+const accessLogStream = (() => {
+  const date = new Date().toISOString().split('T')[0]
+  const path = join(logDir, `access-${date}.log`)
+  return {
+    write: (msg) => { appendFileSync(path, msg, 'utf8') }
+  }
+})()
+app.use(morgan('combined', { stream: accessLogStream }))
+app.use(morgan('dev'))
+
+// ───── Body Parsing ─────
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+app.use(compression())
+
+// ───── Static ─────
 app.use('/uploads', express.static(join(__dirname, 'uploads')))
 
-const upload = multer({ dest: join(__dirname, 'uploads') })
+// ───── Upload ─────
+const upload = multer({
+  dest: join(__dirname, 'uploads'),
+  limits: { fileSize: 10 * 1024 * 1024 },
+})
+
+// ───── Response Helper ─────
+function ok(res, data, message = 'OK') {
+  return res.json({ success: true, message, data, errors: [] })
+}
+function created(res, data, message = 'Created') {
+  return res.status(201).json({ success: true, message, data, errors: [] })
+}
+function fail(res, status, message, errors = []) {
+  return res.status(status).json({ success: false, message, data: null, errors: Array.isArray(errors) ? errors : [errors] })
+}
+
+// ───── Async Wrapper ─────
+function asyncHandler(fn) {
+  return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next)
+}
 
 db.initDB?.()
 
 // ───── Auth Routes ─────
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', asyncHandler(async (req, res) => {
   const { login, password } = req.body
-  if (!login || !password) return res.status(400).json({ error: 'Login va parol talab qilinadi' })
+  if (!login || !password) return fail(res, 400, 'Login va parol talab qilinadi', ['VALIDATION'])
+  if (typeof login !== 'string' || typeof password !== 'string') return fail(res, 400, 'Noto\'g\'ri format', ['VALIDATION'])
   const user = db.authenticate(login, password)
-  if (!user) return res.status(401).json({ error: 'Login yoki parol xato' })
+  if (!user) return fail(res, 401, 'Login yoki parol xato', ['AUTH'])
   const token = generateToken(user)
   const refreshToken = generateRefreshToken(user)
   db.logAudit({ userId: user.id, userName: user.name, userRole: user.role, action: 'Tizimga kirdi', details: '', type: 'auth', ip: req.ip })
   db.logDevice({ userId: user.id, userName: user.name, userRole: user.role, device: req.headers['user-agent'] || '', ip: req.ip, platform: req.headers['sec-ch-ua-platform'] || '' })
-  res.json({ user, token, refreshToken })
-})
+  ok(res, { user, token, refreshToken }, 'Tizimga muvaffaqiyatli kirdingiz')
+}))
 
-app.post('/api/auth/refresh', (req, res) => {
+app.post('/api/auth/refresh', asyncHandler(async (req, res) => {
   const { refreshToken } = req.body
-  if (!refreshToken) return res.status(400).json({ error: 'Refresh token required' })
+  if (!refreshToken) return fail(res, 400, 'Refresh token talab qilinadi', ['VALIDATION'])
   const decoded = verifyToken(refreshToken)
-  if (!decoded || decoded.type !== 'refresh') return res.status(401).json({ error: 'Invalid refresh token' })
+  if (!decoded || decoded.type !== 'refresh') return fail(res, 401, 'Yaroqsiz refresh token', ['AUTH'])
   const user = db.getUser(decoded.id)
-  if (!user) return res.status(404).json({ error: 'User not found' })
+  if (!user) return fail(res, 404, 'Foydalanuvchi topilmadi', ['NOT_FOUND'])
   const token = generateToken(user)
   const newRefreshToken = generateRefreshToken(user)
-  res.json({ user, token, refreshToken: newRefreshToken })
-})
+  ok(res, { user, token, refreshToken: newRefreshToken }, 'Token yangilandi')
+}))
 
 // ───── Protected API Routes ─────
 app.use('/api', authenticate)
 
 // ───── Users ─────
-app.get('/api/users', authorize('superadmin', 'admin'), (req, res) => {
+app.get('/api/users', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
   const users = db.getUsers(req.query.role)
-  if (req.user.role === 'admin') res.json(users.filter(u => u.role !== 'superadmin'))
-  else res.json(users)
-})
+  if (req.user.role === 'admin') return ok(res, users.filter(u => u.role !== 'superadmin'))
+  ok(res, users)
+}))
 
-app.post('/api/users', authorize('superadmin', 'admin'), (req, res) => {
-  if (req.user.role === 'admin' && req.body.role !== 'teacher') return res.status(403).json({ error: 'Admin faqat o\'qituvchi yarata oladi' })
+app.post('/api/users', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
+  if (req.user.role === 'admin' && req.body.role !== 'teacher') return fail(res, 403, 'Admin faqat o\'qituvchi yarata oladi', ['FORBIDDEN'])
   const user = db.createUser({ ...req.body, createdBy: req.user.id, createdByName: req.user.name })
-  if (!user) return res.status(409).json({ error: 'Bunday login mavjud' })
-  res.status(201).json(user)
-})
+  if (!user) return fail(res, 409, 'Bunday login mavjud', ['CONFLICT'])
+  created(res, user, 'Foydalanuvchi yaratildi')
+}))
 
-app.put('/api/users/:id', authorize('superadmin', 'admin'), (req, res) => {
+app.put('/api/users/:id', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
   if (req.user.role === 'admin') delete req.body.role
   const user = db.updateUser(Number(req.params.id), { ...req.body, updatedBy: req.user.id, updatedByName: req.user.name })
-  if (!user) return res.status(404).json({ error: 'User not found' })
-  res.json(user)
-})
+  if (!user) return fail(res, 404, 'Foydalanuvchi topilmadi', ['NOT_FOUND'])
+  ok(res, user, 'Foydalanuvchi yangilandi')
+}))
 
-app.delete('/api/users/:id', authorize('superadmin'), (req, res) => {
-  if (!db.deleteUser(Number(req.params.id))) return res.status(404).json({ error: 'User not found' })
-  res.json({ message: 'Deleted' })
-})
+app.delete('/api/users/:id', authorize('superadmin'), asyncHandler((req, res) => {
+  if (!db.deleteUser(Number(req.params.id))) return fail(res, 404, 'Foydalanuvchi topilmadi', ['NOT_FOUND'])
+  ok(res, null, 'Foydalanuvchi o\'chirildi')
+}))
 
 // ───── Dashboard ─────
-app.get('/api/dashboard', (req, res) => res.json(db.getDashboardStats()))
+app.get('/api/dashboard', asyncHandler((req, res) => ok(res, db.getDashboardStats())))
 
 // ───── Groups ─────
-app.get('/api/groups', (req, res) => res.json(db.getGroups(req.user)))
-
-app.post('/api/groups', authorize('superadmin', 'admin'), (req, res) => {
+app.get('/api/groups', asyncHandler((req, res) => ok(res, db.getGroups(req.user))))
+app.post('/api/groups', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
+  if (!req.body.name) return fail(res, 400, 'Guruh nomi talab qilinadi', ['VALIDATION'])
   const g = db.createGroup({ ...req.body, createdBy: req.user.id, createdByName: req.user.name, createdByRole: req.user.role })
-  res.status(201).json(g)
-})
-
-app.put('/api/groups/:id', authorize('superadmin', 'admin'), (req, res) => {
+  created(res, g, 'Guruh yaratildi')
+}))
+app.put('/api/groups/:id', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
   const g = db.updateGroup(Number(req.params.id), { ...req.body, updatedBy: req.user.id, updatedByName: req.user.name, updatedByRole: req.user.role })
-  if (!g) return res.status(404).json({ error: 'Group not found' })
-  res.json(g)
-})
-
-app.delete('/api/groups/:id', authorize('superadmin', 'admin'), (req, res) => {
-  if (!db.deleteGroup(Number(req.params.id))) return res.status(404).json({ error: 'Group not found' })
-  res.json({ message: 'Deleted' })
-})
+  if (!g) return fail(res, 404, 'Guruh topilmadi', ['NOT_FOUND'])
+  ok(res, g, 'Guruh yangilandi')
+}))
+app.delete('/api/groups/:id', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
+  if (!db.deleteGroup(Number(req.params.id))) return fail(res, 404, 'Guruh topilmadi', ['NOT_FOUND'])
+  ok(res, null, 'Guruh o\'chirildi')
+}))
 
 // ───── Students ─────
-app.get('/api/students', (req, res) => {
+app.get('/api/students', asyncHandler((req, res) => {
   if (req.user.role === 'teacher') {
     const teacher = db.getUser(req.user.id)
-    if (!teacher) return res.json([])
-    res.json(db.getStudents({ groupId: req.query.groupId }).filter(s => teacher.groupIds?.includes(s.groupId)))
-  } else {
-    res.json(db.getStudents(req.query))
+    if (!teacher) return ok(res, [])
+    return ok(res, db.getStudents({ groupId: req.query.groupId }).filter(s => teacher.groupIds?.includes(s.groupId)))
   }
-})
+  ok(res, db.getStudents(req.query))
+}))
 
-app.post('/api/students', authorize('superadmin', 'admin'), upload.single('avatar'), (req, res) => {
+app.post('/api/students', authorize('superadmin', 'admin'), upload.single('avatar'), asyncHandler((req, res) => {
+  if (!req.body.name) return fail(res, 400, 'O\'quvchi ismi talab qilinadi', ['VALIDATION'])
   const data = req.body
   if (data.groupId) data.groupId = Number(data.groupId)
   if (req.file) data.avatar = `/uploads/${req.file.filename}`
   const s = db.createStudent({ ...data, createdBy: req.user.id, createdByName: req.user.name, createdByRole: req.user.role })
-  res.status(201).json(s)
-})
+  created(res, s, 'O\'quvchi qo\'shildi')
+}))
 
-app.put('/api/students/:id', authorize('superadmin', 'admin'), upload.single('avatar'), (req, res) => {
+app.put('/api/students/:id', authorize('superadmin', 'admin'), upload.single('avatar'), asyncHandler((req, res) => {
   const data = req.body
   if (data.groupId) data.groupId = Number(data.groupId)
   if (req.file) data.avatar = `/uploads/${req.file.filename}`
   const s = db.updateStudent(Number(req.params.id), data)
-  if (!s) return res.status(404).json({ error: 'Student not found' })
-  res.json(s)
-})
+  if (!s) return fail(res, 404, 'O\'quvchi topilmadi', ['NOT_FOUND'])
+  ok(res, s, 'O\'quvchi yangilandi')
+}))
 
-app.delete('/api/students/:id', authorize('superadmin', 'admin'), (req, res) => {
-  if (!db.deleteStudent(Number(req.params.id))) return res.status(404).json({ error: 'Student not found' })
-  res.json({ message: 'Deleted' })
-})
+app.delete('/api/students/:id', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
+  if (!db.deleteStudent(Number(req.params.id))) return fail(res, 404, 'O\'quvchi topilmadi', ['NOT_FOUND'])
+  ok(res, null, 'O\'quvchi o\'chirildi')
+}))
 
 // ───── Payments ─────
-app.get('/api/payments', (req, res) => res.json(db.getPayments(req.query)))
-app.post('/api/payments', authorize('superadmin', 'admin'), (req, res) => {
+app.get('/api/payments', asyncHandler((req, res) => ok(res, db.getPayments(req.query))))
+app.post('/api/payments', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
+  if (!req.body.studentId || !req.body.amount) return fail(res, 400, 'Student ID va summa talab qilinadi', ['VALIDATION'])
   const p = db.createPayment({ ...req.body, createdBy: req.user.id, createdByName: req.user.name, createdByRole: req.user.role })
-  res.status(201).json(p)
-})
+  created(res, p, 'To\'lov qayd etildi')
+}))
 
 // ───── Expenses ─────
-app.get('/api/expenses', (req, res) => res.json(db.getExpenses(req.query)))
-app.post('/api/expenses', authorize('superadmin', 'admin'), (req, res) => {
+app.get('/api/expenses', asyncHandler((req, res) => ok(res, db.getExpenses(req.query))))
+app.post('/api/expenses', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
+  if (!req.body.amount || !req.body.description) return fail(res, 400, 'Summa va izoh talab qilinadi', ['VALIDATION'])
   const e = db.createExpense({ ...req.body, createdBy: req.user.id, createdByName: req.user.name, createdByRole: req.user.role })
-  res.status(201).json(e)
-})
-app.delete('/api/expenses/:id', authorize('superadmin', 'admin'), (req, res) => {
-  if (!db.deleteExpense(Number(req.params.id))) return res.status(404).json({ error: 'Expense not found' })
-  res.json({ message: 'Deleted' })
-})
+  created(res, e, 'Xarajat qayd etildi')
+}))
+app.delete('/api/expenses/:id', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
+  if (!db.deleteExpense(Number(req.params.id))) return fail(res, 404, 'Xarajat topilmadi', ['NOT_FOUND'])
+  ok(res, null, 'Xarajat o\'chirildi')
+}))
 
 // ───── Attendance ─────
-app.post('/api/attendance', authorize('superadmin', 'admin', 'teacher'), (req, res) => {
+app.post('/api/attendance', authorize('superadmin', 'admin', 'teacher'), asyncHandler((req, res) => {
+  if (!req.body.studentId || !req.body.date) return fail(res, 400, 'Student ID va sana talab qilinadi', ['VALIDATION'])
   const a = db.markAttendance({ ...req.body, markedBy: req.user.id, markedByName: req.user.name, markedByRole: req.user.role })
-  res.json(a)
-})
-app.get('/api/attendance', authorize('superadmin', 'admin', 'teacher'), (req, res) => res.json(db.getAttendance(req.query)))
+  ok(res, a, 'Davomat belgilandi')
+}))
+app.get('/api/attendance', authorize('superadmin', 'admin', 'teacher'), asyncHandler((req, res) => ok(res, db.getAttendance(req.query))))
 
 // ───── Audit Logs ─────
-app.get('/api/audit-logs', authorize('superadmin'), (req, res) => res.json(db.getAuditLogs(req.query)))
+app.get('/api/audit-logs', authorize('superadmin'), asyncHandler((req, res) => ok(res, db.getAuditLogs(req.query))))
 
 // ───── Reports ─────
-app.get('/api/reports', authorize('superadmin', 'admin'), (req, res) => res.json(db.getReports(req.query)))
+app.get('/api/reports', authorize('superadmin', 'admin'), asyncHandler((req, res) => ok(res, db.getReports(req.query))))
 
 // ───── Notifications ─────
-app.get('/api/notifications', (req, res) => res.json(db.getNotifications(req.user.id)))
-app.put('/api/notifications/:id/read', (req, res) => {
+app.get('/api/notifications', asyncHandler((req, res) => ok(res, db.getNotifications(req.user.id))))
+app.put('/api/notifications/:id/read', asyncHandler((req, res) => {
   db.markNotificationRead(Number(req.params.id))
-  res.json({ message: 'Read' })
-})
+  ok(res, null, 'Xabarnoma o\'qildi')
+}))
 
 // ───── Teachers ─────
-app.get('/api/teachers', authorize('superadmin', 'admin'), (req, res) => res.json(db.getUsers('teacher')))
+app.get('/api/teachers', authorize('superadmin', 'admin'), asyncHandler((req, res) => ok(res, db.getUsers('teacher'))))
 
-// ───── Reset Database (clears all data, keeps default users) ─────
-app.post('/api/reset', authorize('superadmin'), (req, res) => {
+// ───── Reset Database ─────
+app.post('/api/reset', authorize('superadmin'), asyncHandler((req, res) => {
   const data = db.resetDB()
   db.logAudit({ userId: req.user.id, userName: req.user.name, userRole: req.user.role, action: 'Ma\'lumotlar bazasini tozaladi', details: 'Barcha ma\'lumotlar o\'chirildi', type: 'system', ip: req.ip })
-  res.json({ message: 'All data cleared', users: data.users.length })
-})
+  ok(res, { users: data.users.length }, 'Ma\'lumotlar tozalandi')
+}))
 
 // ───── Settings ─────
-app.get('/api/settings', authorize('superadmin'), (req, res) => {
+app.get('/api/settings', authorize('superadmin'), asyncHandler((req, res) => {
   const d = db.getDB()
-  res.json(d.settings)
-})
-app.put('/api/settings', authorize('superadmin'), (req, res) => {
+  ok(res, d.settings)
+}))
+app.put('/api/settings', authorize('superadmin'), asyncHandler((req, res) => {
   const d = db.getDB()
   d.settings = { ...d.settings, ...req.body }
   db.save(d)
-  res.json(d.settings)
-})
+  ok(res, d.settings, 'Sozlamalar saqlandi')
+}))
 
 // ───── Homework ─────
-app.get('/api/homework', (req, res) => res.json(db.getHomework(req.query)))
-app.post('/api/homework', authorize('superadmin', 'admin', 'teacher'), upload.array('files'), (req, res) => {
+app.get('/api/homework', asyncHandler((req, res) => ok(res, db.getHomework(req.query))))
+app.post('/api/homework', authorize('superadmin', 'admin', 'teacher'), upload.array('files'), asyncHandler((req, res) => {
   const data = req.body
   if (req.files?.length) data.files = req.files.map(f => `/uploads/${f.filename}`)
   const hw = db.createHomework({ ...data, createdBy: req.user.id, createdByName: req.user.name })
-  res.status(201).json(hw)
-})
-app.put('/api/homework/:id', authorize('superadmin', 'admin', 'teacher'), (req, res) => {
+  created(res, hw, 'Topshiriq yaratildi')
+}))
+app.put('/api/homework/:id', authorize('superadmin', 'admin', 'teacher'), asyncHandler((req, res) => {
   const hw = db.updateHomework(Number(req.params.id), req.body)
-  if (!hw) return res.status(404).json({ error: 'Homework not found' })
-  res.json(hw)
-})
-app.delete('/api/homework/:id', authorize('superadmin', 'admin', 'teacher'), (req, res) => {
-  if (!db.deleteHomework(Number(req.params.id))) return res.status(404).json({ error: 'Homework not found' })
-  res.json({ message: 'Deleted' })
-})
+  if (!hw) return fail(res, 404, 'Topshiriq topilmadi', ['NOT_FOUND'])
+  ok(res, hw, 'Topshiriq yangilandi')
+}))
+app.delete('/api/homework/:id', authorize('superadmin', 'admin', 'teacher'), asyncHandler((req, res) => {
+  if (!db.deleteHomework(Number(req.params.id))) return fail(res, 404, 'Topshiriq topilmadi', ['NOT_FOUND'])
+  ok(res, null, 'Topshiriq o\'chirildi')
+}))
 
 // ───── Grades ─────
-app.get('/api/grades', (req, res) => res.json(db.getGrades(req.query)))
-app.post('/api/grades', authorize('superadmin', 'admin', 'teacher'), (req, res) => {
+app.get('/api/grades', asyncHandler((req, res) => ok(res, db.getGrades(req.query))))
+app.post('/api/grades', authorize('superadmin', 'admin', 'teacher'), asyncHandler((req, res) => {
+  if (!req.body.studentId || !req.body.subject) return fail(res, 400, 'Student ID va fan talab qilinadi', ['VALIDATION'])
   const g = db.createGrade({ ...req.body, createdBy: req.user.id })
-  res.status(201).json(g)
-})
-app.get('/api/grades/stats/:studentId', (req, res) => res.json(db.getGradeStats(Number(req.params.studentId))))
+  created(res, g, 'Baho qo\'yildi')
+}))
+app.get('/api/grades/stats/:studentId', asyncHandler((req, res) => ok(res, db.getGradeStats(Number(req.params.studentId)))))
 
 // ───── Schedule ─────
-app.get('/api/schedule', (req, res) => res.json(db.getSchedule(req.query)))
-app.post('/api/schedule', authorize('superadmin', 'admin'), (req, res) => {
+app.get('/api/schedule', asyncHandler((req, res) => ok(res, db.getSchedule(req.query))))
+app.post('/api/schedule', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
   const s = db.createSchedule({ ...req.body, createdBy: req.user.id })
-  res.status(201).json(s)
-})
-app.put('/api/schedule/:id', authorize('superadmin', 'admin'), (req, res) => {
+  created(res, s, 'Dars jadvalga qo\'shildi')
+}))
+app.put('/api/schedule/:id', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
   const s = db.updateSchedule(Number(req.params.id), req.body)
-  if (!s) return res.status(404).json({ error: 'Schedule not found' })
-  res.json(s)
-})
-app.delete('/api/schedule/:id', authorize('superadmin', 'admin'), (req, res) => {
-  if (!db.deleteSchedule(Number(req.params.id))) return res.status(404).json({ error: 'Schedule not found' })
-  res.json({ message: 'Deleted' })
-})
+  if (!s) return fail(res, 404, 'Jadval topilmadi', ['NOT_FOUND'])
+  ok(res, s, 'Jadval yangilandi')
+}))
+app.delete('/api/schedule/:id', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
+  if (!db.deleteSchedule(Number(req.params.id))) return fail(res, 404, 'Jadval topilmadi', ['NOT_FOUND'])
+  ok(res, null, 'Jadval o\'chirildi')
+}))
 
 // ───── Messages (Chat) ─────
-app.get('/api/messages', (req, res) => res.json(db.getMessages(req.query)))
-app.post('/api/messages', (req, res) => {
+app.get('/api/messages', asyncHandler((req, res) => ok(res, db.getMessages(req.query))))
+app.post('/api/messages', asyncHandler((req, res) => {
+  if (!req.body.content) return fail(res, 400, 'Xabar matni talab qilinadi', ['VALIDATION'])
   const m = db.sendMessage({ ...req.body, senderId: req.user.id, senderName: req.user.name, senderRole: req.user.role })
-  res.status(201).json(m)
-})
-app.put('/api/messages/read', (req, res) => {
+  created(res, m, 'Xabar yuborildi')
+}))
+app.put('/api/messages/read', asyncHandler((req, res) => {
   db.markMessagesRead(req.user.id, req.body.otherId)
-  res.json({ message: 'Read' })
-})
+  ok(res, null, 'Xabarlar o\'qildi')
+}))
 
 // ───── Library ─────
-app.get('/api/library', (req, res) => res.json(db.getBooks(req.query)))
-app.post('/api/library', authorize('superadmin', 'admin'), upload.single('file'), (req, res) => {
+app.get('/api/library', asyncHandler((req, res) => ok(res, db.getBooks(req.query))))
+app.post('/api/library', authorize('superadmin', 'admin'), upload.single('file'), asyncHandler((req, res) => {
   const data = req.body
   if (req.file) data.fileUrl = `/uploads/${req.file.filename}`
   const b = db.createBook({ ...data, createdBy: req.user.id })
-  res.status(201).json(b)
-})
-app.delete('/api/library/:id', authorize('superadmin', 'admin'), (req, res) => {
-  if (!db.deleteBook(Number(req.params.id))) return res.status(404).json({ error: 'Book not found' })
-  res.json({ message: 'Deleted' })
-})
+  created(res, b, 'Kitob qo\'shildi')
+}))
+app.delete('/api/library/:id', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
+  if (!db.deleteBook(Number(req.params.id))) return fail(res, 404, 'Kitob topilmadi', ['NOT_FOUND'])
+  ok(res, null, 'Kitob o\'chirildi')
+}))
 
 // ───── Exams ─────
-app.get('/api/exams', (req, res) => res.json(db.getExams(req.query)))
-app.post('/api/exams', authorize('superadmin', 'admin', 'teacher'), (req, res) => {
+app.get('/api/exams', asyncHandler((req, res) => ok(res, db.getExams(req.query))))
+app.post('/api/exams', authorize('superadmin', 'admin', 'teacher'), asyncHandler((req, res) => {
   const e = db.createExam({ ...req.body, createdBy: req.user.id })
-  res.status(201).json(e)
-})
-app.post('/api/exams/submit', (req, res) => {
+  created(res, e, 'Imtihon yaratildi')
+}))
+app.post('/api/exams/submit', asyncHandler((req, res) => {
   const r = db.submitExamResult({ ...req.body, studentId: req.user.studentId || req.body.studentId })
-  if (!r) return res.status(404).json({ error: 'Exam not found' })
-  res.json(r)
-})
-app.get('/api/exam-results', (req, res) => res.json(db.getExamResults(req.query)))
+  if (!r) return fail(res, 404, 'Imtihon topilmadi', ['NOT_FOUND'])
+  ok(res, r, 'Natija saqlandi')
+}))
+app.get('/api/exam-results', asyncHandler((req, res) => ok(res, db.getExamResults(req.query))))
 
 // ───── Certificates ─────
-app.get('/api/certificates', (req, res) => res.json(db.getCertificates(req.query)))
-app.post('/api/certificates', authorize('superadmin', 'admin'), (req, res) => {
+app.get('/api/certificates', asyncHandler((req, res) => ok(res, db.getCertificates(req.query))))
+app.post('/api/certificates', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
   const c = db.createCertificate({ ...req.body, issuedBy: req.user.id, issuedByName: req.user.name })
-  res.status(201).json(c)
-})
+  created(res, c, 'Sertifikat yaratildi')
+}))
 
 // ───── QR Attendance ─────
-app.post('/api/qr/generate', authorize('superadmin', 'admin', 'teacher'), (req, res) => {
+app.post('/api/qr/generate', authorize('superadmin', 'admin', 'teacher'), asyncHandler((req, res) => {
   const qr = db.generateQRCode({ ...req.body, createdBy: req.user.id })
-  res.json(qr)
-})
-app.post('/api/qr/verify', (req, res) => {
+  ok(res, qr, 'QR kod yaratildi')
+}))
+app.post('/api/qr/verify', asyncHandler((req, res) => {
+  if (!req.body.code) return fail(res, 400, 'QR kod talab qilinadi', ['VALIDATION'])
   const result = db.verifyQRCode(req.body.code)
-  if (!result) return res.status(404).json({ error: 'Not valid or expired QR code' })
-  res.json(result)
-})
+  if (!result) return fail(res, 404, 'Yaroqsiz yoki muddati o\'tgan QR kod', ['QR_INVALID'])
+  ok(res, result, 'QR kod tasdiqlandi')
+}))
 
 // ───── Parent Portal ─────
-app.get('/api/parent/children', (req, res) => {
-  if (req.user.role !== 'parent') return res.status(403).json({ error: 'Only parents' })
-  res.json(db.getParentChildren(req.user.id))
-})
-app.get('/api/parent/payments', (req, res) => {
-  if (req.user.role !== 'parent') return res.status(403).json({ error: 'Only parents' })
-  res.json(db.getParentPayments(req.user.id))
-})
+app.get('/api/parent/children', asyncHandler((req, res) => {
+  if (req.user.role !== 'parent') return fail(res, 403, 'Faqat ota-onalar uchun', ['FORBIDDEN'])
+  ok(res, db.getParentChildren(req.user.id))
+}))
+app.get('/api/parent/payments', asyncHandler((req, res) => {
+  if (req.user.role !== 'parent') return fail(res, 403, 'Faqat ota-onalar uchun', ['FORBIDDEN'])
+  ok(res, db.getParentPayments(req.user.id))
+}))
 
 // ───── Student Portal ─────
-app.get('/api/student/portal', (req, res) => {
-  if (req.user.role !== 'student') return res.status(403).json({ error: 'Only students' })
+app.get('/api/student/portal', asyncHandler((req, res) => {
+  if (req.user.role !== 'student') return fail(res, 403, 'Faqat o\'quvchilar uchun', ['FORBIDDEN'])
   const student = db.students.find(s => s.studentUserId === req.user.id)
-  if (!student) return res.status(404).json({ error: 'Student not found' })
-  const data = db.getStudentPortalData(student.id)
-  res.json(data)
-})
+  if (!student) return fail(res, 404, 'O\'quvchi topilmadi', ['NOT_FOUND'])
+  ok(res, db.getStudentPortalData(student.id))
+}))
 
 // ───── Devices (Super Admin) ─────
-app.get('/api/devices', authorize('superadmin'), (req, res) => res.json(db.getDevices(req.query)))
+app.get('/api/devices', authorize('superadmin'), asyncHandler((req, res) => ok(res, db.getDevices(req.query))))
+
+// ───── Health Check ─────
+app.get('/api/health', (_, res) => res.json({ success: true, message: 'OK', data: { status: 'healthy', uptime: process.uptime() }, errors: [] }))
 
 // ───── Serve Frontend ─────
 if (existsSync(distPath)) {
-  app.use(express.static(distPath))
+  app.use(express.static(distPath, { maxAge: '7d', etag: true, lastModified: true }))
   app.get('*', (_, res) => res.sendFile(join(distPath, 'index.html')))
 }
 
-// ───── Error Handler ─────
+// ───── 404 Handler ─────
+app.use((_, res) => {
+  res.status(404).json({ success: false, message: 'API endpoint topilmadi', data: null, errors: ['NOT_FOUND'] })
+})
+
+// ───── Global Error Handler ─────
 app.use((err, _, res, __) => {
-  console.error(err)
-  res.status(500).json({ error: err.message || 'Server error' })
+  console.error('[ERROR]', err.message || err)
+  const status = err.status || 500
+  const message = err.message || 'Serverda xatolik yuz berdi'
+  if (status === 500) {
+    try {
+      const logDir2 = join(__dirname, 'logs')
+      if (!existsSync(logDir2)) mkdirSync(logDir2)
+      const date = new Date().toISOString().split('T')[0]
+      appendFileSync(join(logDir2, `error-${date}.log`), `[${new Date().toISOString()}] ${err.stack || err}\n`, 'utf8')
+    } catch {}
+  }
+  res.status(status).json({ success: false, message, data: null, errors: ['SERVER_ERROR'] })
 })
 
 const PORT = process.env.PORT || 3001
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`))
+app.listen(PORT, () => console.log(`✓ Server running on port ${PORT}`))
