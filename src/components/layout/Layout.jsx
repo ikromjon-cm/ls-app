@@ -20,11 +20,14 @@ const Chat = lazy(() => import('../chat/Chat'))
 const Homework = lazy(() => import('../homework/Homework'))
 const Grades = lazy(() => import('../grades/Grades'))
 const Schedule = lazy(() => import('../schedule/Schedule'))
+const Library = lazy(() => import('../library/Library'))
+const Exams = lazy(() => import('../exams/Exams'))
+const Certificates = lazy(() => import('../certificates/Certificates'))
 
 const ROLE_PAGES = {
-  superadmin: ['dashboard', 'groups', 'students', 'payments', 'expenses', 'attendance', 'teachers', 'reports', 'audit', 'notifications', 'settings', 'chat', 'homework', 'grades', 'schedule'],
-  admin: ['dashboard', 'groups', 'students', 'payments', 'expenses', 'attendance', 'teachers', 'reports', 'audit', 'notifications', 'chat', 'homework', 'grades', 'schedule'],
-  teacher: ['dashboard', 'attendance', 'homework', 'grades', 'schedule', 'chat'],
+  superadmin: ['dashboard', 'groups', 'students', 'payments', 'expenses', 'attendance', 'teachers', 'reports', 'audit', 'notifications', 'settings', 'chat', 'homework', 'grades', 'schedule', 'library', 'exams', 'certificates'],
+  admin: ['dashboard', 'groups', 'students', 'payments', 'expenses', 'attendance', 'teachers', 'reports', 'audit', 'notifications', 'chat', 'homework', 'grades', 'schedule', 'library', 'exams', 'certificates'],
+  teacher: ['dashboard', 'attendance', 'homework', 'grades', 'schedule', 'chat', 'library', 'exams'],
 }
 
 function PageFallback({ title }) {
@@ -52,6 +55,9 @@ const pages = {
   homework: Homework,
   grades: Grades,
   schedule: Schedule,
+  library: Library,
+  exams: Exams,
+  certificates: Certificates,
 }
 
 const pageTitles = {
@@ -70,6 +76,9 @@ const pageTitles = {
   homework: 'Topshiriqlar',
   grades: 'Baholar',
   schedule: 'Dars jadvali',
+  library: 'Kutubxona',
+  exams: 'Imtihonlar',
+  certificates: 'Sertifikatlar',
 }
 
 export default function Layout() {

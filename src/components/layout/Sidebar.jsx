@@ -17,6 +17,8 @@ import {
   BookOpen,
   Award,
   Calendar,
+  Book,
+  ClipboardList,
 } from 'lucide-react'
 
 const allMenuItems = [
@@ -31,6 +33,9 @@ const allMenuItems = [
   { id: 'homework', label: 'Topshiriqlar', icon: BookOpen, roles: ['superadmin', 'admin', 'teacher'] },
   { id: 'grades', label: 'Baholar', icon: Award, roles: ['superadmin', 'admin', 'teacher'] },
   { id: 'schedule', label: 'Dars jadvali', icon: Calendar, roles: ['superadmin', 'admin', 'teacher'] },
+  { id: 'library', label: 'Kutubxona', icon: Book, roles: ['superadmin', 'admin', 'teacher'] },
+  { id: 'exams', label: 'Imtihonlar', icon: ClipboardList, roles: ['superadmin', 'admin', 'teacher'] },
+  { id: 'certificates', label: 'Sertifikatlar', icon: Award, roles: ['superadmin', 'admin'] },
   { id: 'reports', label: 'Hisobotlar', icon: BarChart3, roles: ['superadmin', 'admin'] },
   { id: 'audit', label: 'Audit Log', icon: ScrollText, roles: ['superadmin'] },
   { id: 'notifications', label: 'Xabarnomalar', icon: Bell, roles: ['superadmin', 'admin'] },
