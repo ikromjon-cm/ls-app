@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: opencode-crm
+    env: node
+    buildCommand: npm install && npm run build && cd server && npm install
+    startCommand: cd server && node index.js
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 20
