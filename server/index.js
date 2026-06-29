@@ -199,6 +199,134 @@ app.post('/api/payments', authorize('superadmin', 'admin'), asyncHandler((req, r
   const p = db.createPayment({ ...req.body, createdBy: req.user.id, createdByName: req.user.name, createdByRole: req.user.role })
   created(res, p, 'To\'lov qayd etildi')
 }))
+app.put('/api/payments/:id', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
+  const p = db.updatePayment(Number(req.params.id), req.body)
+  if (!p) return fail(res, 404, 'To\'lov topilmadi', ['NOT_FOUND'])
+  ok(res, p, 'To\'lov yangilandi')
+}))
+app.delete('/api/payments/:id', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
+  if (!db.deletePayment(Number(req.params.id))) return fail(res, 404, 'To\'lov topilmadi', ['NOT_FOUND'])
+  ok(res, null, 'To\'lov o\'chirildi')
+}))
+
+// ───── Payment Gateways (Click, Payme, Uzum) ─────
+app.get('/api/payments/providers', asyncHandler((req, res) => {
+  const config = db.getPaymentProviderConfig()
+  const { getEnabledProviders } = await import('./payments/index.js')
+  ok(res, getEnabledProviders(config))
+}))
+
+app.get('/api/payments/transactions', authorize('superadmin', 'admin'), asyncHandler((req, res) => {
+  ok(res, db.getPaymentTransactions(req.query))
+}))
+
+app.post('/api/payments/create-invoice', asyncHandler(async (req, res) => {
+  try {
+    const { provider, amount, description, studentId } = req.body
+    if (!provider || !amount) return fail(res, 400, 'Provider va summa talab qilinadi', ['VALIDATION'])
+    const config = db.getPaymentProviderConfig()
+    const orderId = `ORD${Date.now()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+    const { createPayment } = await import('./payments/index.js')
+    const result = await createPayment({
+      provider, amount: Number(amount), description: description || `To'lov #${orderId}`,
+      orderId, studentId: studentId || null, returnUrl: `${req.protocol}://${req.get('host')}/payments`, config,
+    })
+    const tx = db.createPaymentTransaction({
+      orderId, provider, amount: Number(amount), studentId: studentId || null,
+      invoiceId: result.invoiceId, transactionId: result.transactionId,
+      status: 'pending', userId: req.user.id, userName: req.user.name, description,
+      paymentUrl: result.paymentUrl, metadata: {},
+    })
+    ok(res, { ...result, txId: tx.id }, 'To\'lov so\'rovnomasi yaratildi')
+  } catch (e) {
+    fail(res, 500, e.message || 'To\'lov so\'rovnomasini yaratishda xatolik', ['PAYMENT_ERROR'])
+  }
+}))
+
+app.post('/api/payments/check', asyncHandler(async (req, res) => {
+  try {
+    const { provider, transactionId } = req.body
+    if (!provider || !transactionId) return fail(res, 400, 'Provider va transaction ID talab qilinadi', ['VALIDATION'])
+    const config = db.getPaymentProviderConfig()
+    const { checkPayment } = await import('./payments/index.js')
+    const result = await checkPayment({ provider, transactionId, config })
+    ok(res, result, 'To\'lov holati tekshirildi')
+  } catch (e) {
+    fail(res, 500, e.message || 'To\'lov holatini tekshirishda xatolik', ['PAYMENT_ERROR'])
+  }
+}))
+
+// ───── Payment Webhooks ─────
+app.post('/api/payments/webhook/click', asyncHandler(async (req, res) => {
+  const { ClickProvider } = await import('./payments/click.js')
+  const config = db.getPaymentProviderConfig()
+  const click = new ClickProvider(config.click || {})
+  const body = req.body
+  const invoiceId = body.invoice_id || body.invoiceId
+  if (body.status === 0) {
+    const tx = db.getPaymentTransactionByInvoice(String(invoiceId))
+    if (tx && tx.status !== 'paid') {
+      db.updatePaymentTransaction(tx.id, { status: 'paid', completedAt: new Date().toISOString() })
+      if (tx.studentId) {
+        db.createPayment({
+          studentId: tx.studentId, amount: tx.amount, method: 'Click',
+          date: new Date().toISOString().split('T')[0], note: `Click to'lov #${tx.orderId}`,
+          createdBy: 1, createdByName: 'System (Click)', createdByRole: 'system',
+        })
+      }
+    }
+  }
+  res.json({ status: 0, message: 'OK' })
+}))
+
+app.post('/api/payments/webhook/payme', asyncHandler(async (req, res) => {
+  const body = req.body
+  const account = body.account || {}
+  const orderId = account.order_id
+  if (body.state === 2) {
+    const tx = db.getPaymentTransactionByOrder(orderId)
+    if (tx && tx.status !== 'paid') {
+      db.updatePaymentTransaction(tx.id, { status: 'paid', completedAt: new Date().toISOString() })
+      if (tx.studentId) {
+        db.createPayment({
+          studentId: tx.studentId, amount: tx.amount, method: 'Payme',
+          date: new Date().toISOString().split('T')[0], note: `Payme to'lov #${tx.orderId}`,
+          createdBy: 1, createdByName: 'System (Payme)', createdByRole: 'system',
+        })
+      }
+    }
+  }
+  res.json({ result: { state: body.state || 1 } })
+}))
+
+app.post('/api/payments/webhook/uzum', asyncHandler(async (req, res) => {
+  const body = req.body
+  const orderId = body.orderId || body.order_id
+  const status = body.status
+  if (status === 'paid') {
+    const tx = db.getPaymentTransactionByOrder(String(orderId))
+    if (tx && tx.status !== 'paid') {
+      db.updatePaymentTransaction(tx.id, { status: 'paid', completedAt: new Date().toISOString() })
+      if (tx.studentId) {
+        db.createPayment({
+          studentId: tx.studentId, amount: tx.amount, method: 'Uzum',
+          date: new Date().toISOString().split('T')[0], note: `Uzum to'lov #${tx.orderId}`,
+          createdBy: 1, createdByName: 'System (Uzum)', createdByRole: 'system',
+        })
+      }
+    }
+  }
+  res.json({ success: true })
+}))
+
+app.get('/api/payments/providers/config', authorize('superadmin'), asyncHandler((req, res) => {
+  ok(res, db.getPaymentProviderConfig())
+}))
+
+app.put('/api/payments/providers/config', authorize('superadmin'), asyncHandler((req, res) => {
+  const config = db.updatePaymentProviderConfig(req.body)
+  ok(res, config, 'To\'lov provayderlari sozlandi')
+}))
 
 // ───── Expenses ─────
 app.get('/api/expenses', asyncHandler((req, res) => ok(res, db.getExpenses(req.query))))

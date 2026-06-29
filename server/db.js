@@ -56,10 +56,20 @@ function defaultData() {
     certificates: [],
     qrCodes: [],
     devices: [],
+    paymentTransactions: [],
     branches: ['Markaziy filial'],
     courses: ['Frontend', 'Backend', 'IELTS', 'Python', 'Mobile', 'Design'],
-    settings: { sessionTimeout: 60, smsEnabled: false, telegramEnabled: false },
-    counters: { userId: 4, studentId: 1, groupId: 1, paymentId: 1, expenseId: 1, attendanceId: 1, auditId: 1, notificationId: 1, homeworkId: 1, gradeId: 1, scheduleId: 1, messageId: 1, bookId: 1, examId: 1, examResultId: 1, certificateId: 1, qrId: 1, deviceId: 1 },
+    settings: {
+      sessionTimeout: 60,
+      smsEnabled: false,
+      telegramEnabled: false,
+      paymentProviders: {
+        click: { merchantId: '', secretKey: '', serviceId: '', merchantUserId: '', enabled: false },
+        payme: { merchantId: '', secretKey: '', checkoutUrl: '', enabled: false },
+        uzum: { merchantId: '', secretKey: '', terminalId: '', enabled: false },
+      },
+    },
+    counters: { userId: 4, studentId: 1, groupId: 1, paymentId: 1, expenseId: 1, attendanceId: 1, auditId: 1, notificationId: 1, homeworkId: 1, gradeId: 1, scheduleId: 1, messageId: 1, bookId: 1, examId: 1, examResultId: 1, certificateId: 1, qrId: 1, deviceId: 1, paymentTxId: 1 },
   }
 }
 
@@ -433,6 +443,70 @@ export function createPayment(data) {
   logAudit({ userId: data.createdBy || 1, userName: data.createdByName || 'System', userRole: data.createdByRole || 'admin', action: `${data.amount?.toLocaleString()} so'm to'lov qabul qilindi`, details: `O'quvchi: ${data.studentName || 'N/A'}, To'lov turi: ${data.method}`, type: 'payment', groupId: data.groupId })
   createNotification({ title: 'To\'lov qilindi', message: `${data.studentName || 'N/A'} - ${data.amount?.toLocaleString()} so'm`, type: 'success' })
   return payment
+}
+
+export function updatePayment(id, data) {
+  const db = getDB()
+  const p = db.payments.find(pay => pay.id === id)
+  if (!p) return null
+  Object.assign(p, data)
+  save(db)
+  return p
+}
+
+export function deletePayment(id) {
+  const db = getDB()
+  const idx = db.payments.findIndex(p => p.id === id)
+  if (idx === -1) return false
+  db.payments.splice(idx, 1)
+  save(db)
+  return true
+}
+
+// ───── Payment Transactions (Online) ─────
+export function createPaymentTransaction(data) {
+  const db = getDB()
+  const tx = { id: nextId('paymentTxId'), ...data, createdAt: getNow(), updatedAt: getNow() }
+  db.paymentTransactions.push(tx)
+  save(db)
+  return tx
+}
+
+export function updatePaymentTransaction(id, data) {
+  const db = getDB()
+  const tx = db.paymentTransactions.find(t => t.id === id)
+  if (!tx) return null
+  Object.assign(tx, data, { updatedAt: getNow() })
+  save(db)
+  return tx
+}
+
+export function getPaymentTransactions(filters = {}) {
+  const db = getDB()
+  let list = [...db.paymentTransactions]
+  if (filters.studentId) list = list.filter(t => t.studentId === Number(filters.studentId))
+  if (filters.status) list = list.filter(t => t.status === filters.status)
+  if (filters.provider) list = list.filter(t => t.provider === filters.provider)
+  return list.sort((a, b) => b.id - a.id)
+}
+
+export function getPaymentTransactionByInvoice(invoiceId) {
+  return getDB().paymentTransactions.find(t => t.invoiceId === invoiceId)
+}
+
+export function getPaymentTransactionByOrder(orderId) {
+  return getDB().paymentTransactions.find(t => t.orderId === String(orderId))
+}
+
+export function getPaymentProviderConfig() {
+  return getDB().settings.paymentProviders || {}
+}
+
+export function updatePaymentProviderConfig(config) {
+  const db = getDB()
+  db.settings.paymentProviders = { ...db.settings.paymentProviders, ...config }
+  save(db)
+  return db.settings.paymentProviders
 }
 
 // ───── Expenses ─────
