@@ -8,7 +8,7 @@ import {
   BookOpen, UserPlus, X, Users,
 } from 'lucide-react'
 import PageHeader from '../layout/PageHeader'
-import ConfirmModal from '../ConfirmModal'
+import ConfirmModal from '../common/ConfirmModal'
 
 const COURSES = ['Frontend', 'Backend', 'Python', 'Mobile', 'Design', 'IELTS', 'SMM', 'English', 'Matematika', 'Fizika']
 const DAYS_OPTIONS = [

@@ -9,7 +9,7 @@ import {
   Activity, Camera,
 } from 'lucide-react'
 import PageHeader from '../layout/PageHeader'
-import ConfirmModal from '../ConfirmModal'
+import ConfirmModal from '../common/ConfirmModal'
 
 const COURSES = ['Frontend', 'Backend', 'IELTS', 'Python', 'Mobile', 'Design', 'SMM', 'English', 'Matematika', 'Fizika']
 

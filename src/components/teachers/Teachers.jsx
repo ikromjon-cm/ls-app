@@ -8,7 +8,7 @@ import {
   BookOpen, LogIn, Key, X, Search,
 } from 'lucide-react'
 import PageHeader from '../layout/PageHeader'
-import ConfirmModal from '../ConfirmModal'
+import ConfirmModal from '../common/ConfirmModal'
 
 const AVATAR_COLORS = [
   'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',

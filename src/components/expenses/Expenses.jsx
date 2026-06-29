@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import PageHeader from '../layout/PageHeader'
-import ConfirmModal from '../ConfirmModal'
+import ConfirmModal from '../common/ConfirmModal'
 
 const CATEGORIES = [
   { label: 'Hammasi', value: '' },
