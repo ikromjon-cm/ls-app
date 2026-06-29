@@ -23,9 +23,10 @@ const Schedule = lazy(() => import('../schedule/Schedule'))
 const Library = lazy(() => import('../library/Library'))
 const Exams = lazy(() => import('../exams/Exams'))
 const Certificates = lazy(() => import('../certificates/Certificates'))
+const PaymentSettings = lazy(() => import('../payments/PaymentSettings'))
 
 const ROLE_PAGES = {
-  superadmin: ['dashboard', 'groups', 'students', 'payments', 'expenses', 'attendance', 'teachers', 'reports', 'audit', 'notifications', 'settings', 'chat', 'homework', 'grades', 'schedule', 'library', 'exams', 'certificates'],
+  superadmin: ['dashboard', 'groups', 'students', 'payments', 'expenses', 'attendance', 'teachers', 'reports', 'audit', 'notifications', 'settings', 'chat', 'homework', 'grades', 'schedule', 'library', 'exams', 'certificates', 'payment-settings'],
   admin: ['dashboard', 'groups', 'students', 'payments', 'expenses', 'attendance', 'teachers', 'reports', 'audit', 'notifications', 'chat', 'homework', 'grades', 'schedule', 'library', 'exams', 'certificates'],
   teacher: ['dashboard', 'attendance', 'homework', 'grades', 'schedule', 'chat', 'library', 'exams'],
 }
@@ -58,6 +59,7 @@ const pages = {
   library: Library,
   exams: Exams,
   certificates: Certificates,
+  'payment-settings': PaymentSettings,
 }
 
 const pageTitles = {
@@ -79,6 +81,7 @@ const pageTitles = {
   library: 'Kutubxona',
   exams: 'Imtihonlar',
   certificates: 'Sertifikatlar',
+  'payment-settings': "To'lov tizimlari",
 }
 
 export default function Layout() {

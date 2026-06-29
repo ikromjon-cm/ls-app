@@ -40,6 +40,7 @@ const allMenuItems = [
   { id: 'audit', label: 'Audit Log', icon: ScrollText, roles: ['superadmin'] },
   { id: 'notifications', label: 'Xabarnomalar', icon: Bell, roles: ['superadmin', 'admin'] },
   { id: 'settings', label: 'Sozlamalar', icon: Settings, roles: ['superadmin'] },
+  { id: 'payment-settings', label: "To'lov tizimlari", icon: CreditCard, roles: ['superadmin'] },
 ]
 
 export default function Sidebar() {
