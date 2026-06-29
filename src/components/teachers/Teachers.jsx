@@ -332,7 +332,7 @@ export default function Teachers() {
                               <div key={g.id} className="flex items-center justify-between text-xs bg-gray-50 dark:bg-gray-800/50 rounded-lg px-3 py-2">
                                 <div>
                                   <p className="font-medium text-gray-700 dark:text-gray-300">{g.name}</p>
-                                  <p className="text-gray-400">{g.course} | {g.students?.length || 0} ta o'quvchi</p>
+                                  <p className="text-gray-400">{g.course} | {g.studentIds?.length || 0} ta o'quvchi</p>
                                 </div>
                                 <span className="text-gray-400">{g.days} {g.time}</span>
                               </div>

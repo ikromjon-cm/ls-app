@@ -86,10 +86,10 @@ export default function AuditLogs() {
 
   useEffect(() => {
     const filters = {}
-    if (dateFrom) filters.dateFrom = dateFrom
-    if (dateTo) filters.dateTo = dateTo
+    if (dateFrom) filters.startDate = dateFrom
+    if (dateTo) filters.endDate = dateTo
     if (userId) filters.userId = userId
-    if (actionType) filters.action = actionType
+    if (actionType) filters.type = actionType
     if (search.trim()) filters.search = search.trim()
     refreshAuditLogs(filters)
   }, [dateFrom, dateTo, userId, actionType, search, refreshAuditLogs])
@@ -100,10 +100,10 @@ export default function AuditLogs() {
       return
     }
     const filters = {}
-    if (dateFrom) filters.dateFrom = dateFrom
-    if (dateTo) filters.dateTo = dateTo
+    if (dateFrom) filters.startDate = dateFrom
+    if (dateTo) filters.endDate = dateTo
     if (userId) filters.userId = userId
-    if (actionType) filters.action = actionType
+    if (actionType) filters.type = actionType
     intervalRef.current = setInterval(() => {
       refreshAuditLogs(filters)
     }, 30000)
@@ -118,7 +118,7 @@ export default function AuditLogs() {
         l.userName?.toLowerCase().includes(q) ||
         l.details?.toLowerCase().includes(q) ||
         l.action?.toLowerCase().includes(q) ||
-        l.ipAddress?.includes(q)
+        l.ip?.includes(q)
       )
     }
     return list
@@ -216,8 +216,8 @@ export default function AuditLogs() {
                     key={log.id || idx}
                     className={`border-b border-gray-100 dark:border-gray-800 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/30 ${ROW_BG[log.action] || ''}`}
                   >
-                    <td className="py-3 px-4 text-gray-600 dark:text-gray-400 whitespace-nowrap text-xs" title={formatDate(log.timestamp)}>
-                      {getRelativeTime(log.timestamp)}
+                    <td className="py-3 px-4 text-gray-600 dark:text-gray-400 whitespace-nowrap text-xs" title={formatDate(log.createdAt)}>
+                      {getRelativeTime(log.createdAt)}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
@@ -236,7 +236,7 @@ export default function AuditLogs() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-gray-600 dark:text-gray-400 max-w-xs truncate">{log.details || '—'}</td>
-                    <td className="py-3 px-4 text-gray-500 dark:text-gray-400 font-mono text-xs">{log.ipAddress || '—'}</td>
+                    <td className="py-3 px-4 text-gray-500 dark:text-gray-400 font-mono text-xs">{log.ip || '—'}</td>
                   </tr>
                 ))
               )}

@@ -24,6 +24,7 @@ const pageTitles = {
   reports: 'Hisobotlar',
   audit: 'Audit Log',
   notifications: 'Xabarnomalar',
+  settings: 'Sozlamalar',
 }
 
 export default function Navbar() {

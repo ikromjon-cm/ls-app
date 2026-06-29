@@ -287,7 +287,7 @@ export function getStudents(filters = {}) {
   if (filters.course) students = students.filter(s => s.course === filters.course)
   if (filters.search) {
     const q = filters.search.toLowerCase()
-    students = students.filter(s => s.name.toLowerCase().includes(q) || s.phone.includes(q) || s.parentPhone.includes(q))
+    students = students.filter(s => s.name.toLowerCase().includes(q) || s.phone?.includes(q) || s.parentPhone?.includes(q))
   }
   if (filters.status) students = students.filter(s => s.paymentStatus === filters.status)
   return students.map(s => ({ ...s, groupName: db.groups.find(g => g.id === s.groupId)?.name || 'N/A' }))
@@ -409,7 +409,7 @@ export function markAttendance(data) {
   }
 
   logAudit({ userId: data.markedBy || 1, userName: data.markedByName || 'System', userRole: data.markedByRole || 'teacher', action: `Davomat qilindi: ${data.status === 'present' ? 'Keldi' : data.status === 'absent' ? 'Kelmadi' : 'Kechikdi'}`, details: `O'quvchi: ${data.studentName || 'N/A'}`, type: 'attendance', groupId: data.groupId })
-  return existing || { id: db.counters.attendanceId, ...data }
+  return existing || { id: db.counters.attendanceId - 1, ...data }
 }
 
 export function getAttendance(filters = {}) {

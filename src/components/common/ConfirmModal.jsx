@@ -1,10 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertTriangle, X } from 'lucide-react'
 
-export default function ConfirmModal({ show, title, message, danger, onConfirm, onCancel }) {
+export default function ConfirmModal({ show, open, title, message, danger, onConfirm, onCancel }) {
   return (
     <AnimatePresence>
-      {show && (
+      {(show || open) && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useApp } from '../../context/AppContext'
 import { api } from '../../api'
 import { useForm } from 'react-hook-form'
@@ -55,6 +55,9 @@ function formatDate(dateStr) {
 }
 
 function Toast({ show, message, type, onClose }) {
+  useEffect(() => {
+    if (show) { const t = setTimeout(onClose, 3000); return () => clearTimeout(t) }
+  }, [show, onClose])
   const bg = type === 'success' ? 'bg-emerald-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'
   if (!show) return null
   return (

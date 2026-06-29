@@ -112,7 +112,16 @@ export default function Attendance() {
           ...prev,
           [studentId]: nextStatus,
         }))
-        dispatch({ type: 'SET_INITIAL', data: { attendance: [...(state.attendance || []), result] } })
+        const existing = state.attendance || []
+        const idx = existing.findIndex(a => a.studentId === studentId && a.date === selectedDate)
+        if (nextStatus === null && idx >= 0) {
+          dispatch({ type: 'SET_INITIAL', data: { attendance: existing.filter((_, i) => i !== idx) } })
+          return
+        }
+        const updated = idx >= 0
+          ? existing.map((a, i) => i === idx ? result : a)
+          : [...existing, result]
+        dispatch({ type: 'SET_INITIAL', data: { attendance: updated } })
       }
     } catch (err) {
       showToast(err.message || 'Xatolik yuz berdi', 'error')

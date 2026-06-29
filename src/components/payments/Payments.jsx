@@ -157,6 +157,8 @@ export default function Payments() {
         amount: Number(formAmount),
         method: formMethod,
         date: formDate,
+        studentName: selectedStudent?.name || '',
+        groupId: selectedStudent?.groupId || null,
       }
       const created = await api.createPayment(payload)
       dispatch({ type: 'ADD_PAYMENT', payment: created })

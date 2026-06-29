@@ -161,7 +161,7 @@ export default function Students() {
 
   const openEditModal = (student) => {
     setEditingStudent(student)
-    setAvatarPreview(student.avatarUrl || null)
+    setAvatarPreview(student.avatar || null)
     setAvatarFile(null)
     reset({
       name: student.name || '',
