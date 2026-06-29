@@ -1,219 +1,293 @@
-import { readFileSync, writeFileSync, existsSync } from 'fs'
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
+import pg from 'pg'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const DB_PATH = join(__dirname, 'crm.json')
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/opencode_crm',
+})
 
 const getToday = () => new Date().toLocaleDateString('en-CA')
 
-const defaultData = {
-  groups: [
-    {
-      id: 1, name: 'Frontend (HTML, CSS, JS)', teacher: 'Sardorov S.', price: 500000,
-      days: 'Dushanba / Chorshanba / Juma', time: '15:00 - 17:00',
-      students: [
-        { id: 101, name: 'Aliyev Aziz', phone: '+998901234567', paymentStatus: 'paid', attendance: { [getToday()]: 'present' } },
-        { id: 102, name: 'Karimova Nilufar', phone: '+998901234568', paymentStatus: 'debt', attendance: {} },
-        { id: 103, name: 'Toshmatov Jahongir', phone: '+998901234569', paymentStatus: 'paid', attendance: {} },
-        { id: 104, name: 'Rahimova Zilola', phone: '+998901234570', paymentStatus: 'paid', attendance: {} },
-      ],
-    },
-    {
-      id: 2, name: 'IELTS', teacher: 'Johnson R.', price: 800000,
-      days: 'Seshanba / Payshanba / Shanba', time: '10:00 - 12:00',
-      students: [
-        { id: 201, name: 'Umarov Sardor', phone: '+998901234571', paymentStatus: 'debt', attendance: {} },
-        { id: 202, name: 'Qodirova Madina', phone: '+998901234572', paymentStatus: 'paid', attendance: {} },
-        { id: 203, name: 'Xasanov Bekzod', phone: '+998901234573', paymentStatus: 'paid', attendance: { [getToday()]: 'present' } },
-        { id: 204, name: 'Sultonova Dilnoza', phone: '+998901234574', paymentStatus: 'debt', attendance: {} },
-      ],
-    },
-    {
-      id: 3, name: 'Python', teacher: 'Kadyrov T.', price: 600000,
-      days: 'Dushanba / Chorshanba / Juma', time: '17:00 - 19:00',
-      students: [
-        { id: 301, name: 'Norov Jasur', phone: '+998901234575', paymentStatus: 'paid', attendance: {} },
-        { id: 302, name: 'Ismailova Aziza', phone: '+998901234576', paymentStatus: 'debt', attendance: {} },
-        { id: 303, name: 'Rahimov Timur', phone: '+998901234577', paymentStatus: 'paid', attendance: {} },
-        { id: 304, name: 'Yusupova Guzal', phone: '+998901234578', paymentStatus: 'paid', attendance: { [getToday()]: 'present' } },
-      ],
-    },
-  ],
-  payments: [
-    { id: 1, studentId: 101, studentName: 'Aliyev Aziz', groupName: 'Frontend (HTML, CSS, JS)', amount: 500000, date: '2026-06-01', method: 'Naqd' },
-    { id: 2, studentId: 202, studentName: 'Qodirova Madina', groupName: 'IELTS', amount: 800000, date: '2026-06-02', method: 'Plastik' },
-    { id: 3, studentId: 301, studentName: 'Norov Jasur', groupName: 'Python', amount: 600000, date: '2026-06-03', method: 'Naqd' },
-  ],
-  nextGroupId: 4,
-  nextStudentId: 305,
-  nextPaymentId: 4,
-}
+export async function initDB() {
+  const client = await pool.connect()
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS course_groups (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        teacher TEXT NOT NULL,
+        price INTEGER NOT NULL,
+        days TEXT NOT NULL,
+        time TEXT NOT NULL
+      );
 
-let data = null
+      CREATE TABLE IF NOT EXISTS students (
+        id SERIAL PRIMARY KEY,
+        group_id INTEGER NOT NULL REFERENCES course_groups(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        payment_status TEXT NOT NULL DEFAULT 'debt'
+      );
 
-export function initDB() {
-  if (existsSync(DB_PATH)) {
-    data = JSON.parse(readFileSync(DB_PATH, 'utf-8'))
-  } else {
-    data = JSON.parse(JSON.stringify(defaultData))
-    saveDB()
+      CREATE TABLE IF NOT EXISTS attendance (
+        id SERIAL PRIMARY KEY,
+        student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+        date TEXT NOT NULL,
+        status TEXT NOT NULL,
+        UNIQUE(student_id, date)
+      );
+
+      CREATE TABLE IF NOT EXISTS payments (
+        id SERIAL PRIMARY KEY,
+        student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+        student_name TEXT NOT NULL,
+        group_name TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        method TEXT NOT NULL DEFAULT 'Naqd',
+        date TEXT NOT NULL
+      );
+    `)
+
+    const { rowCount } = await client.query('SELECT COUNT(*) as c FROM course_groups')
+    if (parseInt(rowCount[0]?.c || '0') === 0) await seedData(client)
+  } finally {
+    client.release()
   }
 }
 
-function saveDB() {
-  writeFileSync(DB_PATH, JSON.stringify(data, null, 2))
+async function seedData(client) {
+  const today = getToday()
+
+  const g1 = (await client.query(
+    `INSERT INTO course_groups (name, teacher, price, days, time) VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+    ['Frontend (HTML, CSS, JS)', 'Sardorov S.', 500000, 'Dushanba / Chorshanba / Juma', '15:00 - 17:00']
+  )).rows[0].id
+
+  const g2 = (await client.query(
+    `INSERT INTO course_groups (name, teacher, price, days, time) VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+    ['IELTS', 'Johnson R.', 800000, 'Seshanba / Payshanba / Shanba', '10:00 - 12:00']
+  )).rows[0].id
+
+  const g3 = (await client.query(
+    `INSERT INTO course_groups (name, teacher, price, days, time) VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+    ['Python', 'Kadyrov T.', 600000, 'Dushanba / Chorshanba / Juma', '17:00 - 19:00']
+  )).rows[0].id
+
+  const students = [
+    [g1, 'Aliyev Aziz', '+998901234567', 'paid'],
+    [g1, 'Karimova Nilufar', '+998901234568', 'debt'],
+    [g1, 'Toshmatov Jahongir', '+998901234569', 'paid'],
+    [g1, 'Rahimova Zilola', '+998901234570', 'paid'],
+    [g2, 'Umarov Sardor', '+998901234571', 'debt'],
+    [g2, 'Qodirova Madina', '+998901234572', 'paid'],
+    [g2, 'Xasanov Bekzod', '+998901234573', 'paid'],
+    [g2, 'Sultonova Dilnoza', '+998901234574', 'debt'],
+    [g3, 'Norov Jasur', '+998901234575', 'paid'],
+    [g3, 'Ismailova Aziza', '+998901234576', 'debt'],
+    [g3, 'Rahimov Timur', '+998901234577', 'paid'],
+    [g3, 'Yusupova Guzal', '+998901234578', 'paid'],
+  ]
+
+  const studentIds = []
+  for (const [gid, name, phone, status] of students) {
+    const r = await client.query(
+      `INSERT INTO students (group_id, name, phone, payment_status) VALUES ($1,$2,$3,$4) RETURNING id`,
+      [gid, name, phone, status]
+    )
+    studentIds.push(r.rows[0].id)
+  }
+
+  // Mark today's attendance for some students
+  await client.query(
+    `INSERT INTO attendance (student_id, date, status) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`,
+    [studentIds[0], today, 'present']
+  )
+  await client.query(
+    `INSERT INTO attendance (student_id, date, status) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`,
+    [studentIds[6], today, 'present']
+  )
+  await client.query(
+    `INSERT INTO attendance (student_id, date, status) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`,
+    [studentIds[11], today, 'present']
+  )
+
+  // Sample payments
+  await client.query(
+    `INSERT INTO payments (student_id, student_name, group_name, amount, method, date) VALUES ($1,$2,$3,$4,$5,$6)`,
+    [studentIds[0], 'Aliyev Aziz', 'Frontend (HTML, CSS, JS)', 500000, 'Naqd', '2026-06-01']
+  )
+  await client.query(
+    `INSERT INTO payments (student_id, student_name, group_name, amount, method, date) VALUES ($1,$2,$3,$4,$5,$6)`,
+    [studentIds[5], 'Qodirova Madina', 'IELTS', 800000, 'Plastik', '2026-06-02']
+  )
+  await client.query(
+    `INSERT INTO payments (student_id, student_name, group_name, amount, method, date) VALUES ($1,$2,$3,$4,$5,$6)`,
+    [studentIds[8], 'Norov Jasur', 'Python', 600000, 'Naqd', '2026-06-03']
+  )
 }
 
 // ───── Groups ─────
 
-export function getGroups() {
-  return data.groups.map((g) => ({
+export async function getGroups() {
+  const { rows: groups } = await pool.query('SELECT * FROM course_groups ORDER BY id')
+  const { rows: students } = await pool.query('SELECT * FROM students ORDER BY id')
+  const { rows: attendanceRows } = await pool.query('SELECT * FROM attendance')
+
+  const attMap = {}
+  for (const a of attendanceRows) {
+    if (!attMap[a.student_id]) attMap[a.student_id] = {}
+    attMap[a.student_id][a.date] = a.status
+  }
+
+  return groups.map((g) => ({
     id: g.id,
     name: g.name,
     teacher: g.teacher,
     price: g.price,
     days: g.days,
     time: g.time,
-    students: g.students.map((s) => ({
-      id: s.id,
-      groupId: g.id,
-      name: s.name,
-      phone: s.phone,
-      paymentStatus: s.paymentStatus,
-      attendance: s.attendance || {},
-    })),
+    students: students
+      .filter((s) => s.group_id === g.id)
+      .map((s) => ({
+        id: s.id,
+        groupId: g.id,
+        name: s.name,
+        phone: s.phone,
+        paymentStatus: s.payment_status,
+        attendance: attMap[s.id] || {},
+      })),
   }))
 }
 
-export function createGroup({ name, teacher, price, days, time }) {
-  const group = { id: data.nextGroupId++, name, teacher, price, days, time, students: [] }
-  data.groups.push(group)
-  saveDB()
-  return { ...group, students: [] }
+export async function createGroup({ name, teacher, price, days, time }) {
+  const { rows } = await pool.query(
+    `INSERT INTO course_groups (name, teacher, price, days, time) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+    [name, teacher, price, days, time]
+  )
+  const g = rows[0]
+  return { id: g.id, name: g.name, teacher: g.teacher, price: g.price, days: g.days, time: g.time, students: [] }
 }
 
-export function updateGroup(id, { name, teacher, price, days, time }) {
-  const idx = data.groups.findIndex((g) => g.id === id)
-  if (idx === -1) return null
-  const g = data.groups[idx]
-  if (name !== undefined) g.name = name
-  if (teacher !== undefined) g.teacher = teacher
-  if (price !== undefined) g.price = price
-  if (days !== undefined) g.days = days
-  if (time !== undefined) g.time = time
-  saveDB()
-  return { ...g, students: g.students.map((s) => ({ ...s, attendance: s.attendance || {} })) }
+export async function updateGroup(id, data) {
+  const fields = []
+  const values = []
+  let i = 1
+  for (const [key, val] of Object.entries(data)) {
+    if (val !== undefined) {
+      const col = key === 'teacher' ? 'teacher' : key === 'price' ? 'price' : key === 'days' ? 'days' : key === 'time' ? 'time' : key === 'name' ? 'name' : null
+      if (col) {
+        fields.push(`${col} = $${i++}`)
+        values.push(val)
+      }
+    }
+  }
+  if (fields.length === 0) return null
+  values.push(id)
+  const { rows } = await pool.query(
+    `UPDATE course_groups SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`,
+    values
+  )
+  if (rows.length === 0) return null
+  const g = rows[0]
+  return { id: g.id, name: g.name, teacher: g.teacher, price: g.price, days: g.days, time: g.time }
 }
 
-export function deleteGroup(id) {
-  const idx = data.groups.findIndex((g) => g.id === id)
-  if (idx === -1) return false
-  data.groups.splice(idx, 1)
-  data.payments = data.payments.filter((p) => !data.groups.some((g) => g.students.some((s) => s.id === p.studentId)))
-  saveDB()
-  return true
+export async function deleteGroup(id) {
+  const { rowCount } = await pool.query('DELETE FROM course_groups WHERE id = $1', [id])
+  return rowCount > 0
 }
 
 // ───── Students ─────
 
-export function addStudent(groupId, { name, phone }) {
-  const group = data.groups.find((g) => g.id === groupId)
-  if (!group) return null
-  const student = { id: data.nextStudentId++, name, phone, paymentStatus: 'debt', attendance: {} }
-  group.students.push(student)
-  saveDB()
-  return { ...student, groupId }
+export async function addStudent(groupId, { name, phone }) {
+  const { rows } = await pool.query(
+    `INSERT INTO students (group_id, name, phone, payment_status) VALUES ($1,$2,$3,'debt') RETURNING *`,
+    [groupId, name, phone]
+  )
+  const s = rows[0]
+  return { id: s.id, groupId: s.group_id, name: s.name, phone: s.phone, paymentStatus: s.payment_status, attendance: {} }
 }
 
-export function updateStudent(id, { name, phone }) {
-  for (const g of data.groups) {
-    const s = g.students.find((s) => s.id === id)
-    if (s) {
-      if (name !== undefined) s.name = name
-      if (phone !== undefined) s.phone = phone
-      saveDB()
-      return { ...s, groupId: g.id }
-    }
-  }
-  return null
+export async function updateStudent(id, { name, phone }) {
+  const fields = []
+  const values = []
+  let i = 1
+  if (name !== undefined) { fields.push(`name = $${i++}`); values.push(name) }
+  if (phone !== undefined) { fields.push(`phone = $${i++}`); values.push(phone) }
+  if (fields.length === 0) return null
+  values.push(id)
+  const { rows } = await pool.query(
+    `UPDATE students SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`,
+    values
+  )
+  if (rows.length === 0) return null
+  const s = rows[0]
+  return { id: s.id, groupId: s.group_id, name: s.name, phone: s.phone, paymentStatus: s.payment_status }
 }
 
-export function deleteStudent(id) {
-  for (const g of data.groups) {
-    const idx = g.students.findIndex((s) => s.id === id)
-    if (idx !== -1) {
-      g.students.splice(idx, 1)
-      saveDB()
-      return true
-    }
-  }
-  return false
+export async function deleteStudent(id) {
+  const { rowCount } = await pool.query('DELETE FROM students WHERE id = $1', [id])
+  return rowCount > 0
 }
 
 // ───── Payments ─────
 
-export function markPayment(studentId, { amount, method }) {
-  for (const g of data.groups) {
-    const s = g.students.find((s) => s.id === studentId)
-    if (s) {
-      s.paymentStatus = 'paid'
-      const payment = {
-        id: data.nextPaymentId++,
-        studentId,
-        studentName: s.name,
-        groupName: g.name,
-        amount: amount || g.price,
-        method: method || 'Naqd',
-        date: getToday(),
-      }
-      data.payments.push(payment)
-      saveDB()
-      return payment
-    }
-  }
-  return null
+export async function markPayment(studentId, { amount, method }) {
+  const { rows: sRows } = await pool.query('SELECT * FROM students WHERE id = $1', [studentId])
+  if (sRows.length === 0) return null
+  const s = sRows[0]
+  const { rows: gRows } = await pool.query('SELECT * FROM course_groups WHERE id = $1', [s.group_id])
+  const g = gRows[0]
+
+  await pool.query("UPDATE students SET payment_status = 'paid' WHERE id = $1", [studentId])
+  const { rows: pRows } = await pool.query(
+    `INSERT INTO payments (student_id, student_name, group_name, amount, method, date) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+    [studentId, s.name, g.name, amount || g.price, method || 'Naqd', getToday()]
+  )
+  return pRows[0]
 }
 
-export function getPayments() {
-  return [...data.payments].reverse()
+export async function getPayments() {
+  const { rows } = await pool.query('SELECT * FROM payments ORDER BY date DESC, id DESC')
+  return rows
 }
 
 // ───── Attendance ─────
 
-export function markAttendance(studentId, { date, status }) {
-  for (const g of data.groups) {
-    const s = g.students.find((s) => s.id === studentId)
-    if (s) {
-      if (!s.attendance) s.attendance = {}
-      s.attendance[date] = status
-      saveDB()
-      return { studentId, date, status }
-    }
-  }
-  return null
+export async function markAttendance(studentId, { date, status }) {
+  const { rowCount } = await pool.query('SELECT 1 FROM students WHERE id = $1', [studentId])
+  if (rowCount === 0) return null
+  await pool.query(
+    `INSERT INTO attendance (student_id, date, status) VALUES ($1,$2,$3) ON CONFLICT (student_id, date) DO UPDATE SET status = $3`,
+    [studentId, date, status]
+  )
+  return { studentId, date, status }
 }
 
 // ───── Stats ─────
 
-export function getStats() {
-  const totalStudents = data.groups.reduce((sum, g) => sum + g.students.length, 0)
-  const activeGroups = data.groups.length
-  const debtors = data.groups.reduce((sum, g) => sum + g.students.filter((s) => s.paymentStatus === 'debt').length, 0)
-  const revenue = data.groups.reduce((sum, g) => sum + g.students.filter((s) => s.paymentStatus === 'paid').length * g.price, 0)
+export async function getStats() {
+  const { rows: ts } = await pool.query('SELECT COUNT(*) as c FROM students')
+  const totalStudents = parseInt(ts[0].c)
+  const { rows: ag } = await pool.query('SELECT COUNT(*) as c FROM course_groups')
+  const activeGroups = parseInt(ag[0].c)
+  const { rows: db } = await pool.query("SELECT COUNT(*) as c FROM students WHERE payment_status = 'debt'")
+  const debtors = parseInt(db[0].c)
+  const { rows: rev } = await pool.query(`
+    SELECT COALESCE(SUM(g.price), 0) as rev FROM students s
+    JOIN course_groups g ON s.group_id = g.id
+    WHERE s.payment_status = 'paid'
+  `)
+  const totalRevenue = parseInt(rev[0].rev)
 
   const today = getToday()
-  let presentToday = 0
-  for (const g of data.groups) {
-    for (const s of g.students) {
-      if (s.attendance?.[today] === 'present') presentToday++
-    }
-  }
+  const { rows: pt } = await pool.query(
+    "SELECT COUNT(*) as c FROM attendance WHERE date = $1 AND status = 'present'", [today]
+  )
+  const presentToday = parseInt(pt[0].c)
 
   return {
     totalStudents,
     activeGroups,
-    totalRevenue: revenue,
+    totalRevenue,
     debtors,
     paidCount: totalStudents - debtors,
     presentToday,
@@ -222,16 +296,24 @@ export function getStats() {
   }
 }
 
-export function getDebtors(search = '') {
-  const result = []
-  for (const g of data.groups) {
-    for (const s of g.students) {
-      if (s.paymentStatus === 'debt') {
-        if (!search || s.name.toLowerCase().includes(search.toLowerCase()) || s.phone.includes(search) || g.name.toLowerCase().includes(search.toLowerCase())) {
-          result.push({ id: s.id, name: s.name, phone: s.phone, paymentStatus: s.paymentStatus, groupName: g.name, groupPrice: g.price, groupId: g.id })
-        }
-      }
-    }
-  }
-  return result
+export async function getDebtors(search = '') {
+  const like = `%${search}%`
+  const { rows } = await pool.query(`
+    SELECT s.id, s.name, s.phone, s.payment_status, g.name as "groupName", g.price as "groupPrice", g.id as "groupId"
+    FROM students s JOIN course_groups g ON s.group_id = g.id
+    WHERE s.payment_status = 'debt'
+    AND (s.name ILIKE $1 OR s.phone ILIKE $1 OR g.name ILIKE $1)
+    ORDER BY s.name
+  `, [like])
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    phone: r.phone,
+    paymentStatus: r.payment_status,
+    groupName: r.groupName,
+    groupPrice: r.groupPrice,
+    groupId: r.groupId,
+  }))
 }
+
+export { getToday }
