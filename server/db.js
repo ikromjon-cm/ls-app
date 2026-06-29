@@ -460,4 +460,10 @@ export function getReports(filters = {}) {
   return result
 }
 
+export function resetDB() {
+  const data = defaultData()
+  write(data)
+  return data
+}
+
 export { getDB, getToday, save }

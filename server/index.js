@@ -164,6 +164,13 @@ app.put('/api/notifications/:id/read', (req, res) => {
 // ───── Teachers ─────
 app.get('/api/teachers', authorize('superadmin', 'admin'), (req, res) => res.json(db.getUsers('teacher')))
 
+// ───── Reset Database (clears all data, keeps default users) ─────
+app.post('/api/reset', authorize('superadmin'), (req, res) => {
+  const data = db.resetDB()
+  db.logAudit({ userId: req.user.id, userName: req.user.name, userRole: req.user.role, action: 'Ma\'lumotlar bazasini tozaladi', details: 'Barcha ma\'lumotlar o\'chirildi', type: 'system', ip: req.ip })
+  res.json({ message: 'All data cleared', users: data.users.length })
+})
+
 // ───── Settings ─────
 app.get('/api/settings', authorize('superadmin'), (req, res) => {
   const d = db.getDB()
