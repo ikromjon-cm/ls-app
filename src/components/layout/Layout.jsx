@@ -15,6 +15,7 @@ const Teachers = lazy(() => import('../teachers/Teachers'))
 const Reports = lazy(() => import('../reports/Reports'))
 const Audit = lazy(() => import('../audit/AuditLogs'))
 const Notifications = lazy(() => import('../notifications/NotificationPage'))
+const Settings = lazy(() => import('../settings/Settings'))
 
 function PageFallback({ title }) {
   return (
@@ -36,6 +37,7 @@ const pages = {
   reports: Reports,
   audit: Audit,
   notifications: Notifications,
+  settings: Settings,
 }
 
 const pageTitles = {
@@ -49,6 +51,7 @@ const pageTitles = {
   reports: 'Hisobotlar',
   audit: 'Audit Log',
   notifications: 'Xabarnomalar',
+  settings: 'Sozlamalar',
 }
 
 export default function Layout() {

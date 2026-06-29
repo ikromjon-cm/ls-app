@@ -26,6 +26,7 @@ const allMenuItems = [
   { id: 'reports', label: 'Hisobotlar', icon: BarChart3, roles: ['superadmin', 'admin'] },
   { id: 'audit', label: 'Audit Log', icon: ScrollText, roles: ['superadmin'] },
   { id: 'notifications', label: 'Xabarnomalar', icon: Bell, roles: ['superadmin'] },
+  { id: 'settings', label: 'Sozlamalar', icon: Settings, roles: ['superadmin'] },
 ]
 
 export default function Sidebar() {

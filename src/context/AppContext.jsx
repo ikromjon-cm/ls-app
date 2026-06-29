@@ -4,6 +4,7 @@ import { api } from '../api'
 const AppContext = createContext()
 
 const initialState = {
+  currentPage: 'dashboard',
   theme: localStorage.getItem('theme') || 'light',
   sidebarOpen: true,
   groups: [],
@@ -24,6 +25,8 @@ function reducer(state, action) {
   switch (action.type) {
     case 'SET_INITIAL':
       return { ...state, ...action.data, loading: false }
+    case 'SET_PAGE':
+      return { ...state, currentPage: action.payload }
     case 'SET_THEME':
       return { ...state, theme: action.theme }
     case 'TOGGLE_SIDEBAR':
