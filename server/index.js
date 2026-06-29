@@ -54,6 +54,7 @@ app.get('/api/users', authorize('superadmin', 'admin'), (req, res) => {
 })
 
 app.post('/api/users', authorize('superadmin', 'admin'), (req, res) => {
+  if (req.user.role === 'admin' && req.body.role !== 'teacher') return res.status(403).json({ error: 'Admin faqat o\'qituvchi yarata oladi' })
   const user = db.createUser({ ...req.body, createdBy: req.user.id, createdByName: req.user.name })
   if (!user) return res.status(409).json({ error: 'Bunday login mavjud' })
   res.status(201).json(user)

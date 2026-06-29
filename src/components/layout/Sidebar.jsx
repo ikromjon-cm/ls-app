@@ -18,14 +18,14 @@ import {
 const allMenuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['superadmin', 'admin', 'teacher'] },
   { id: 'groups', label: 'Guruhlar', icon: Users, roles: ['superadmin', 'admin', 'teacher'] },
-  { id: 'students', label: "O'quvchilar", icon: GraduationCap, roles: ['superadmin', 'admin', 'teacher'] },
-  { id: 'payments', label: "To'lovlar", icon: CreditCard, roles: ['superadmin', 'admin', 'teacher'] },
-  { id: 'expenses', label: 'Xarajatlar', icon: Wallet, roles: ['superadmin', 'admin', 'teacher'] },
+  { id: 'students', label: "O'quvchilar", icon: GraduationCap, roles: ['superadmin', 'admin'] },
+  { id: 'payments', label: "To'lovlar", icon: CreditCard, roles: ['superadmin', 'admin'] },
+  { id: 'expenses', label: 'Xarajatlar', icon: Wallet, roles: ['superadmin', 'admin'] },
   { id: 'attendance', label: 'Davomat', icon: CalendarCheck, roles: ['superadmin', 'admin', 'teacher'] },
   { id: 'teachers', label: "O'qituvchilar", icon: Presentation, roles: ['superadmin', 'admin'] },
   { id: 'reports', label: 'Hisobotlar', icon: BarChart3, roles: ['superadmin', 'admin'] },
   { id: 'audit', label: 'Audit Log', icon: ScrollText, roles: ['superadmin'] },
-  { id: 'notifications', label: 'Xabarnomalar', icon: Bell, roles: ['superadmin'] },
+  { id: 'notifications', label: 'Xabarnomalar', icon: Bell, roles: ['superadmin', 'admin'] },
   { id: 'settings', label: 'Sozlamalar', icon: Settings, roles: ['superadmin'] },
 ]
 

@@ -33,27 +33,11 @@ function defaultData() {
     users: [
       { id: 1, login: 'superadmin', password: bcrypt.hashSync('admin123', 10), name: 'Super Admin', role: 'superadmin', phone: '+998901234567', createdAt: now, updatedAt: now, avatar: null, active: true },
       { id: 2, login: 'admin1', password: bcrypt.hashSync('admin123', 10), name: 'Admin Aziza', role: 'admin', phone: '+998901234568', createdAt: now, updatedAt: now, avatar: null, active: true, branch: 'Markaziy filial' },
-      { id: 3, login: 'teacher1', password: bcrypt.hashSync('teacher123', 10), name: "O'qituvchi Bekzod", role: 'teacher', phone: '+998901234569', createdAt: now, updatedAt: now, avatar: null, active: true, groupIds: [1, 2] },
+      { id: 3, login: 'teacher1', password: bcrypt.hashSync('teacher123', 10), name: "O'qituvchi Bekzod", role: 'teacher', phone: '+998901234569', createdAt: now, updatedAt: now, avatar: null, active: true, groupIds: [] },
     ],
-    students: [
-      { id: 1, groupId: 1, name: 'Aliyev Aziz', gender: 'Erkak', phone: '+998901234567', parentPhone: '+998901234500', parentName: 'Aliyev Akbar', address: 'Toshkent', school: '25-maktab', course: 'Frontend', paymentAmount: 500000, paymentDate: '2026-06-01', discount: 0, paymentStatus: 'paid', startDate: '2026-06-01', createdAt: '2026-06-01T08:00:00.000Z', updatedAt: '2026-06-01T08:00:00.000Z' },
-      { id: 2, groupId: 1, name: 'Karimova Nilufar', gender: 'Ayol', phone: '+998901234568', parentPhone: '+998901234501', parentName: 'Karimov Bobur', address: 'Toshkent', school: '42-maktab', course: 'Frontend', paymentAmount: 500000, paymentDate: '', discount: 0, paymentStatus: 'debt', startDate: '2026-06-01', createdAt: '2026-06-01T08:00:00.000Z', updatedAt: '2026-06-01T08:00:00.000Z' },
-      { id: 3, groupId: 1, name: 'Toshmatov Jahongir', gender: 'Erkak', phone: '+998901234569', parentPhone: '+998901234502', parentName: 'Toshmatov Anvar', address: 'Toshkent', school: '18-maktab', course: 'Frontend', paymentAmount: 500000, paymentDate: '2026-06-15', discount: 0, paymentStatus: 'paid', startDate: '2026-06-01', createdAt: '2026-06-01T08:00:00.000Z', updatedAt: '2026-06-01T08:00:00.000Z' },
-      { id: 4, groupId: 2, name: 'Umarov Sardor', gender: 'Erkak', phone: '+998901234571', parentPhone: '+998901234503', parentName: 'Umarov Dilmurod', address: 'Toshkent', school: '12-maktab', course: 'IELTS', paymentAmount: 800000, paymentDate: '', discount: 0, paymentStatus: 'debt', startDate: '2026-06-05', createdAt: '2026-06-05T08:00:00.000Z', updatedAt: '2026-06-05T08:00:00.000Z' },
-      { id: 5, groupId: 2, name: 'Qodirova Madina', gender: 'Ayol', phone: '+998901234572', parentPhone: '+998901234504', parentName: 'Qodirov Rustam', address: 'Toshkent', school: '5-maktab', course: 'IELTS', paymentAmount: 800000, paymentDate: '2026-06-10', discount: 0, paymentStatus: 'paid', startDate: '2026-06-05', createdAt: '2026-06-05T08:00:00.000Z', updatedAt: '2026-06-05T08:00:00.000Z' },
-      { id: 6, groupId: 3, name: 'Rahimov Timur', gender: 'Erkak', phone: '+998901234577', parentPhone: '+998901234505', parentName: 'Rahimov Shoxrux', address: 'Toshkent', school: '30-maktab', course: 'Python', paymentAmount: 600000, paymentDate: '2026-06-12', discount: 0, paymentStatus: 'paid', startDate: '2026-06-03', createdAt: '2026-06-03T08:00:00.000Z', updatedAt: '2026-06-03T08:00:00.000Z' },
-      { id: 7, groupId: 3, name: 'Ismailova Aziza', gender: 'Ayol', phone: '+998901234576', parentPhone: '+998901234506', parentName: 'Ismailov Farrux', address: 'Toshkent', school: '9-maktab', course: 'Python', paymentAmount: 600000, paymentDate: '', discount: 0, paymentStatus: 'debt', startDate: '2026-06-03', createdAt: '2026-06-03T08:00:00.000Z', updatedAt: '2026-06-03T08:00:00.000Z' },
-    ],
-    groups: [
-      { id: 1, name: 'Frontend N1', course: 'Frontend', teacherId: 3, teacherName: "O'qituvchi Bekzod", startDate: '2026-06-01', endDate: '2026-09-01', days: 'Dushanba / Chorshanba / Juma', time: '15:00 - 17:00', room: '201', maxStudents: 15, price: 500000, status: 'active', studentIds: [1, 2, 3], createdAt: '2026-06-01T08:00:00.000Z', updatedAt: '2026-06-01T08:00:00.000Z' },
-      { id: 2, name: 'IELTS Intensive', course: 'IELTS', teacherId: 3, teacherName: "O'qituvchi Bekzod", startDate: '2026-06-05', endDate: '2026-09-05', days: 'Seshanba / Payshanba / Shanba', time: '10:00 - 12:00', room: '301', maxStudents: 12, price: 800000, status: 'active', studentIds: [4, 5], createdAt: '2026-06-05T08:00:00.000Z', updatedAt: '2026-06-05T08:00:00.000Z' },
-      { id: 3, name: 'Python Basic', course: 'Python', teacherId: 4, teacherName: 'Toshmatov T.', startDate: '2026-06-03', endDate: '2026-08-03', days: 'Dushanba / Chorshanba / Juma', time: '17:00 - 19:00', room: '202', maxStudents: 10, price: 600000, status: 'active', studentIds: [6, 7], createdAt: '2026-06-03T08:00:00.000Z', updatedAt: '2026-06-03T08:00:00.000Z' },
-    ],
-    payments: [
-      { id: 1, studentId: 1, studentName: 'Aliyev Aziz', groupId: 1, groupName: 'Frontend N1', amount: 500000, method: 'Naqd', date: '2026-06-01', createdBy: 2, createdByName: 'Admin Aziza', createdAt: '2026-06-01T08:00:00.000Z' },
-      { id: 2, studentId: 5, studentName: 'Qodirova Madina', groupId: 2, groupName: 'IELTS Intensive', amount: 800000, method: 'Payme', date: '2026-06-10', createdBy: 2, createdByName: 'Admin Aziza', createdAt: '2026-06-10T08:00:00.000Z' },
-      { id: 3, studentId: 6, studentName: 'Rahimov Timur', groupId: 3, groupName: 'Python Basic', amount: 600000, method: 'Naqd', date: '2026-06-12', createdBy: 2, createdByName: 'Admin Aziza', createdAt: '2026-06-12T08:00:00.000Z' },
-    ],
+    students: [],
+    groups: [],
+    payments: [],
     expenses: [],
     attendance: [],
     auditLogs: [],
@@ -61,7 +45,7 @@ function defaultData() {
     branches: ['Markaziy filial'],
     courses: ['Frontend', 'Backend', 'IELTS', 'Python', 'Mobile', 'Design'],
     settings: { sessionTimeout: 60, smsEnabled: false, telegramEnabled: false },
-    counters: { userId: 4, studentId: 8, groupId: 4, paymentId: 4, expenseId: 1, attendanceId: 1, auditId: 1, notificationId: 1 },
+    counters: { userId: 4, studentId: 1, groupId: 1, paymentId: 1, expenseId: 1, attendanceId: 1, auditId: 1, notificationId: 1 },
   }
 }
 

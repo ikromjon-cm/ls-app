@@ -25,6 +25,8 @@ function reducer(state, action) {
   switch (action.type) {
     case 'SET_INITIAL':
       return { ...state, ...action.data, loading: false }
+    case 'REFRESH_DATA':
+      return { ...state, ...action.data }
     case 'SET_PAGE':
       return { ...state, currentPage: action.payload }
     case 'SET_THEME':
@@ -91,6 +93,13 @@ export function AppProvider({ children }) {
 
   useEffect(() => { loadInitial() }, [loadInitial])
 
+  // Auto-refresh every 30 seconds after initial load so all users see real-time changes
+  useEffect(() => {
+    if (state.loading) return
+    const interval = setInterval(refreshAll, 30000)
+    return () => clearInterval(interval)
+  }, [state.loading, refreshAll])
+
   // Refresh functions
   const refreshGroups = useCallback(async () => { const groups = await api.getGroups(); dispatch({ type: 'SET_INITIAL', data: { groups } }) }, [])
   const refreshStudents = useCallback(async () => { const students = await api.getStudents({}); dispatch({ type: 'SET_INITIAL', data: { students } }) }, [])
@@ -107,7 +116,7 @@ export function AppProvider({ children }) {
         api.getGroups(), api.getStudents({}), api.getPayments({}),
         api.getExpenses({}), api.getDashboard(), api.getNotifications(),
       ])
-      dispatch({ type: 'SET_INITIAL', data: { groups, students, payments, expenses, stats, notifications } })
+      dispatch({ type: 'REFRESH_DATA', data: { groups, students, payments, expenses, stats, notifications } })
     } catch {}
   }, [])
 
