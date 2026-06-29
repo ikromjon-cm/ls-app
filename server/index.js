@@ -12,72 +12,70 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
-function asyncHandler(fn) {
-  return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next)
-}
+initDB()
 
 // Groups
-app.get('/api/groups', asyncHandler(async (_, res) => res.json(await getGroups())))
+app.get('/api/groups', (_, res) => res.json(getGroups()))
 
-app.post('/api/groups', asyncHandler(async (req, res) => {
+app.post('/api/groups', (req, res) => {
   const { name, teacher, price, days, time } = req.body
   if (!name?.trim() || !teacher?.trim() || !price || !days?.trim() || !time?.trim())
     return res.status(400).json({ error: 'All fields required' })
-  res.status(201).json(await createGroup({ name: name.trim(), teacher: teacher.trim(), price: Number(price), days: days.trim(), time: time.trim() }))
-}))
+  res.status(201).json(createGroup({ name: name.trim(), teacher: teacher.trim(), price: Number(price), days: days.trim(), time: time.trim() }))
+})
 
-app.put('/api/groups/:id', asyncHandler(async (req, res) => {
-  const result = await updateGroup(Number(req.params.id), req.body)
+app.put('/api/groups/:id', (req, res) => {
+  const result = updateGroup(Number(req.params.id), req.body)
   if (!result) return res.status(404).json({ error: 'Group not found' })
   res.json(result)
-}))
+})
 
-app.delete('/api/groups/:id', asyncHandler(async (req, res) => {
-  if (!(await deleteGroup(Number(req.params.id)))) return res.status(404).json({ error: 'Group not found' })
+app.delete('/api/groups/:id', (req, res) => {
+  if (!deleteGroup(Number(req.params.id))) return res.status(404).json({ error: 'Group not found' })
   res.json({ message: 'Deleted' })
-}))
+})
 
 // Students
-app.post('/api/groups/:id/students', asyncHandler(async (req, res) => {
+app.post('/api/groups/:id/students', (req, res) => {
   const { name, phone } = req.body
   if (!name?.trim() || !phone?.trim()) return res.status(400).json({ error: 'Name and phone required' })
-  const student = await addStudent(Number(req.params.id), { name: name.trim(), phone: phone.trim() })
+  const student = addStudent(Number(req.params.id), { name: name.trim(), phone: phone.trim() })
   if (!student) return res.status(404).json({ error: 'Group not found' })
   res.status(201).json(student)
-}))
+})
 
-app.put('/api/students/:id', asyncHandler(async (req, res) => {
-  const result = await updateStudent(Number(req.params.id), req.body)
+app.put('/api/students/:id', (req, res) => {
+  const result = updateStudent(Number(req.params.id), req.body)
   if (!result) return res.status(404).json({ error: 'Student not found' })
   res.json(result)
-}))
+})
 
-app.delete('/api/students/:id', asyncHandler(async (req, res) => {
-  if (!(await deleteStudent(Number(req.params.id)))) return res.status(404).json({ error: 'Student not found' })
+app.delete('/api/students/:id', (req, res) => {
+  if (!deleteStudent(Number(req.params.id))) return res.status(404).json({ error: 'Student not found' })
   res.json({ message: 'Deleted' })
-}))
+})
 
 // Payments
-app.post('/api/students/:id/payment', asyncHandler(async (req, res) => {
-  const payment = await markPayment(Number(req.params.id), req.body)
+app.post('/api/students/:id/payment', (req, res) => {
+  const payment = markPayment(Number(req.params.id), req.body)
   if (!payment) return res.status(404).json({ error: 'Student not found' })
   res.status(201).json(payment)
-}))
+})
 
-app.get('/api/payments', asyncHandler(async (_, res) => res.json(await getPayments())))
+app.get('/api/payments', (_, res) => res.json(getPayments()))
 
 // Attendance
-app.post('/api/students/:id/attendance', asyncHandler(async (req, res) => {
+app.post('/api/students/:id/attendance', (req, res) => {
   const { date, status } = req.body
   if (!date || !status) return res.status(400).json({ error: 'Date and status required' })
-  const result = await markAttendance(Number(req.params.id), { date, status })
+  const result = markAttendance(Number(req.params.id), { date, status })
   if (!result) return res.status(404).json({ error: 'Student not found' })
   res.json(result)
-}))
+})
 
 // Stats & Debtors
-app.get('/api/stats', asyncHandler(async (_, res) => res.json(await getStats())))
-app.get('/api/debtors', asyncHandler(async (req, res) => res.json(await getDebtors(req.query.search || ''))))
+app.get('/api/stats', (_, res) => res.json(getStats()))
+app.get('/api/debtors', (req, res) => res.json(getDebtors(req.query.search || '')))
 
 // Serve Frontend (Production)
 if (existsSync(distPath)) {
@@ -92,13 +90,5 @@ app.use((err, _, res, __) => {
   res.status(500).json({ error: err.message || 'Internal server error' })
 })
 
-// Init DB then start server
-initDB()
-  .then(() => {
-    const PORT = process.env.PORT || 3001
-    app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`))
-  })
-  .catch((err) => {
-    console.error('Failed to initialize database:', err)
-    process.exit(1)
-  })
+const PORT = process.env.PORT || 3001
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`))
