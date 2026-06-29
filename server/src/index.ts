@@ -5,9 +5,11 @@ import helmet from 'helmet'
 import compression from 'compression'
 import morgan from 'morgan'
 import { rateLimit } from 'express-rate-limit'
-import { existsSync, mkdirSync, appendFileSync } from 'fs'
+import { existsSync, mkdirSync, appendFileSync, readFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import swaggerUi from 'swagger-ui-express'
+import YAML from 'yaml'
 import env from './config/env.js'
 import prisma from './config/database.js'
 import redis from './config/redis.js'
@@ -62,6 +64,20 @@ app.get('/api/health', async (_, res) => {
   ok(res, { status: 'healthy', uptime: process.uptime(), database: dbHealthy ? 'healthy' : 'unhealthy', redis: redisHealthy ? 'healthy' : 'unhealthy' })
 })
 app.get('/health', (_, res) => ok(res, { status: 'healthy', uptime: process.uptime() }))
+
+// ───── API Docs (Swagger) ─────
+try {
+  const swaggerPath = join(__dirname, '..', 'docs', 'openapi.yml')
+  if (existsSync(swaggerPath)) {
+    const swaggerDoc = YAML.parse(readFileSync(swaggerPath, 'utf8'))
+    app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc, {
+      customCss: '.swagger-ui .topbar { display: none }',
+      customSiteTitle: 'OpenCode CRM API Docs',
+    }))
+    app.get('/api/docs.json', (_, res) => res.json(swaggerDoc))
+    console.log('  ✓ Swagger UI at /api/docs')
+  }
+} catch {}
 
 // ═══════════════════════════════════════════
 // AUTH

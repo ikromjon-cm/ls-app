@@ -2,13 +2,44 @@ services:
   - type: web
     name: opencode-crm
     env: node
-    buildCommand: npm install && npm run build && cd server && npm install
-    startCommand: cd server && node index.js
+    region: frankfurt
+    plan: starter
+    buildCommand: |-
+      cd server && npm install && npx prisma generate && cd .. && npm install && npm run build
+    startCommand: cd server && npm run db:push && node dist/index.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
-        value: 20
+        value: '22'
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: '3001'
+      - key: DATABASE_URL
+        fromDatabase:
+          name: opencode-crm-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: opencode-crm-redis
+          property: connectionString
       - key: JWT_SECRET
         generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
       - key: CORS_ORIGIN
-        value: "*"
+        value: '*'
+
+databases:
+  - name: opencode-crm-db
+    databaseName: opencode_crm
+    plan: starter
+    region: frankfurt
+    postgresMajorVersion: 16
+
+redis:
+  - name: opencode-crm-redis
+    plan: starter
+    region: frankfurt
+    maxmemoryPolicy: allkeys-lru

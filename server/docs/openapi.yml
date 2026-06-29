@@ -1,0 +1,627 @@
+openapi: 3.0.3
+info:
+  title: OpenCode CRM API
+  description: Enterprise-grade educational center management platform
+  version: 2.0.0
+  contact:
+    name: OpenCode Team
+    email: support@opencode.uz
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://ls-app-m856.onrender.com/api
+    description: Production server
+  - url: http://localhost:3001/api
+    description: Local development
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    OrganizationHeader:
+      type: apiKey
+      in: header
+      name: X-Organization-Id
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string }
+        data: { nullable: true }
+        errors: { type: array, items: { type: string } }
+
+    Success:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string }
+        data: { type: object }
+        errors: { type: array, items: { type: string }, example: [] }
+
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        login: { type: string }
+        name: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        role: { type: string, enum: [super_admin, org_admin, manager, teacher, parent, student, employee] }
+        active: { type: boolean }
+        avatar: { type: string, nullable: true }
+        lastLoginAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+
+    Organization:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        slug: { type: string, unique: true }
+        plan: { type: string, enum: [free, starter, pro, enterprise] }
+        status: { type: string, enum: [active, suspended, deleted] }
+        createdAt: { type: string, format: date-time }
+
+paths:
+  # ───── Health ─────
+  /health:
+    get:
+      summary: Health check
+      tags: [System]
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  # ───── Auth ─────
+  /auth/login:
+    post:
+      summary: Login with credentials
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [login, password]
+              properties:
+                login: { type: string, description: 'Username, email, or phone' }
+                password: { type: string }
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      user: { $ref: '#/components/schemas/User' }
+                      token: { type: string, description: 'JWT access token' }
+                      refreshToken: { type: string }
+                      organization: { $ref: '#/components/schemas/Organization' }
+        '401':
+          description: Invalid credentials
+
+  /auth/send-otp:
+    post:
+      summary: Send OTP to phone
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone: { type: string }
+      responses:
+        '200':
+          description: OTP sent
+
+  /auth/verify-otp:
+    post:
+      summary: Verify OTP and login
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, code]
+              properties:
+                phone: { type: string }
+                code: { type: string }
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: '#/components/schemas/User' }
+                  token: { type: string }
+
+  /auth/setup-2fa:
+    post:
+      summary: Setup 2FA (generate secret + QR code)
+      tags: [Authentication]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 2FA secret and QR code generated
+
+  /auth/enable-2fa:
+    post:
+      summary: Enable 2FA with verification
+      tags: [Authentication]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string, description: 'TOTP code from authenticator app' }
+      responses:
+        '200':
+          description: 2FA enabled
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: Token refreshed
+
+  /auth/logout:
+    post:
+      summary: Invalidate session
+      tags: [Authentication]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Logged out
+
+  # ───── Organizations ─────
+  /organizations/register:
+    post:
+      summary: Register new organization (multi-tenant)
+      tags: [Organizations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, slug, adminName, adminEmail, adminPassword]
+              properties:
+                name: { type: string, description: 'Organization name' }
+                slug: { type: string, description: 'Unique URL slug' }
+                adminName: { type: string }
+                adminEmail: { type: string }
+                adminPassword: { type: string, format: password }
+      responses:
+        '201':
+          description: Organization created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  organization: { $ref: '#/components/schemas/Organization' }
+                  user: { type: object }
+
+  # ───── Dashboard ─────
+  /dashboard:
+    get:
+      summary: Get dashboard statistics
+      tags: [Dashboard]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalStudents: { type: integer }
+                  totalGroups: { type: integer }
+                  totalTeachers: { type: integer }
+                  totalRevenue: { type: number }
+                  totalExpense: { type: number }
+                  netProfit: { type: number }
+                  debtors: { type: integer }
+                  attendanceRate: { type: integer }
+                  monthlyRevenue:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        month: { type: integer }
+                        revenue: { type: number }
+                        expense: { type: number }
+
+  # ───── Users ─────
+  /users:
+    get:
+      summary: List users
+      tags: [Users]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: User list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/User' }
+    post:
+      summary: Create user
+      tags: [Users]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [login, name, password, role]
+              properties:
+                login: { type: string }
+                name: { type: string }
+                password: { type: string }
+                role: { type: string }
+                email: { type: string }
+                phone: { type: string }
+      responses:
+        '201': { description: User created }
+
+  # ───── Groups ─────
+  /groups:
+    get:
+      summary: List groups
+      tags: [Groups]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: Group list }
+    post:
+      summary: Create group
+      tags: [Groups]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201': { description: Group created }
+
+  # ───── Students ─────
+  /students:
+    get:
+      summary: List students
+      tags: [Students]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+          description: Search by name or phone
+        - in: query
+          name: groupId
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string, enum: [paid, debt, risk] }
+      responses:
+        '200': { description: Student list }
+    post:
+      summary: Create student
+      tags: [Students]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                phone: { type: string }
+                groupId: { type: string }
+                course: { type: string }
+                parentName: { type: string }
+                parentPhone: { type: string }
+      responses:
+        '201': { description: Student created }
+
+  # ───── Payments ─────
+  /payments:
+    get:
+      summary: List payments
+      tags: [Payments]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: Payment list }
+    post:
+      summary: Create payment
+      tags: [Payments]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studentId, amount]
+              properties:
+                studentId: { type: string }
+                amount: { type: number }
+                method: { type: string, enum: [Naqd, Click, Payme, Uzum, Bank, Stripe] }
+                date: { type: string, format: date }
+                note: { type: string }
+      responses:
+        '201': { description: Payment created }
+
+  /payments/providers:
+    get:
+      summary: Get enabled payment providers
+      tags: [Payments]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: Provider list }
+
+  /payments/create-invoice:
+    post:
+      summary: Create payment invoice (online payment)
+      tags: [Payments]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider, amount]
+              properties:
+                provider: { type: string, enum: [click, payme, uzum] }
+                amount: { type: number }
+                studentId: { type: string }
+                description: { type: string }
+      responses:
+        '200': { description: Invoice created with payment URL }
+
+  /payments/webhook/click:
+    post:
+      summary: Click payment webhook
+      tags: [Webhooks]
+      responses:
+        '200': { description: Webhook processed }
+
+  /payments/webhook/payme:
+    post:
+      summary: Payme payment webhook
+      tags: [Webhooks]
+      responses:
+        '200': { description: Webhook processed }
+
+  /payments/webhook/uzum:
+    post:
+      summary: Uzum payment webhook
+      tags: [Webhooks]
+      responses:
+        '200': { description: Webhook processed }
+
+  # ───── Attendance ─────
+  /attendance:
+    get:
+      summary: Get attendance
+      tags: [Attendance]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: date
+          schema: { type: string, format: date }
+        - in: query
+          name: groupId
+          schema: { type: string }
+      responses:
+        '200': { description: Attendance records }
+    post:
+      summary: Mark attendance
+      tags: [Attendance]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studentId, date, status]
+              properties:
+                studentId: { type: string }
+                date: { type: string, format: date }
+                status: { type: string, enum: [present, absent, late] }
+                note: { type: string }
+      responses:
+        '200': { description: Attendance marked }
+
+  # ───── Messages ─────
+  /messages:
+    get:
+      summary: Get messages (pass ?otherId= for conversation)
+      tags: [Messages]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: otherId
+          schema: { type: string }
+      responses:
+        '200': { description: Message list }
+    post:
+      summary: Send message
+      tags: [Messages]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content, receiverId]
+              properties:
+                content: { type: string }
+                receiverId: { type: string }
+                studentId: { type: string }
+      responses:
+        '201': { description: Message sent }
+
+  # ───── Notifications ─────
+  /notifications:
+    get:
+      summary: Get notifications
+      tags: [Notifications]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: Notification list }
+
+  /notifications/{id}/read:
+    put:
+      summary: Mark notification as read
+      tags: [Notifications]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Marked as read }
+
+  # ───── Expenses ─────
+  /expenses:
+    get:
+      summary: List expenses
+      tags: [Expenses]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: Expense list }
+    post:
+      summary: Create expense
+      tags: [Expenses]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, description]
+              properties:
+                amount: { type: number }
+                description: { type: string }
+                category: { type: string }
+                date: { type: string, format: date }
+      responses:
+        '201': { description: Expense created }
+
+  # ───── Additional endpoints ─────
+  /homework:
+    get:
+      summary: List homework
+      tags: [Homework]
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Homework list } }
+    post:
+      summary: Create homework
+      tags: [Homework]
+      security: [{ BearerAuth: [] }]
+      responses: { '201': { description: Homework created } }
+
+  /grades:
+    get:
+      summary: List grades
+      tags: [Grades]
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Grade list } }
+    post:
+      summary: Create grade
+      tags: [Grades]
+      security: [{ BearerAuth: [] }]
+      responses: { '201': { description: Grade created } }
+
+  /schedule:
+    get:
+      summary: Get schedule
+      tags: [Schedule]
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Schedule entries } }
+    post:
+      summary: Create schedule entry
+      tags: [Schedule]
+      security: [{ BearerAuth: [] }]
+      responses: { '201': { description: Entry created } }
+
+  /library:
+    get:
+      summary: List library books
+      tags: [Library]
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Book list } }
+    post:
+      summary: Add book
+      tags: [Library]
+      security: [{ BearerAuth: [] }]
+      responses: { '201': { description: Book added } }
+
+  /exams:
+    get:
+      summary: List exams
+      tags: [Exams]
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Exam list } }
+    post:
+      summary: Create exam
+      tags: [Exams]
+      security: [{ BearerAuth: [] }]
+      responses: { '201': { description: Exam created } }
+
+  /certificates:
+    get:
+      summary: List certificates
+      tags: [Certificates]
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Certificate list } }
+    post:
+      summary: Issue certificate
+      tags: [Certificates]
+      security: [{ BearerAuth: [] }]
+      responses: { '201': { description: Certificate issued } }
