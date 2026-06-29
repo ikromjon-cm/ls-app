@@ -59,12 +59,21 @@ export const api = {
   createStudent: (data) => {
     if (data.avatar instanceof File) {
       const form = new FormData()
-      Object.entries(data).forEach(([k, v]) => form.append(k, v))
-      return fetch(`${BASE}/students`, { method: 'POST', headers: { Authorization: `Bearer ${authToken}` }, body: form }).then(r => r.json())
+      Object.entries(data).forEach(([k, v]) => { if (v !== undefined && v !== null) form.append(k, v) })
+      const headers = { Authorization: `Bearer ${authToken}` }
+      return fetch(`${BASE}/students`, { method: 'POST', headers, body: form }).then(async r => { if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Server error'); return r.json() })
     }
     return request('/students', { method: 'POST', body: JSON.stringify(data) })
   },
-  updateStudent: (id, data) => request(`/students/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  updateStudent: (id, data) => {
+    if (data.avatar instanceof File) {
+      const form = new FormData()
+      Object.entries(data).forEach(([k, v]) => { if (v !== undefined && v !== null) form.append(k, v) })
+      const headers = { Authorization: `Bearer ${authToken}` }
+      return fetch(`${BASE}/students/${id}`, { method: 'PUT', headers, body: form }).then(async r => { if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Server error'); return r.json() })
+    }
+    return request(`/students/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+  },
   deleteStudent: (id) => request(`/students/${id}`, { method: 'DELETE' }),
 
   // Payments

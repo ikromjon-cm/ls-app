@@ -9,36 +9,36 @@ import PageHeader from '../layout/PageHeader'
 
 const ACTION_TYPES = [
   { value: '', label: 'Barcha harakatlar' },
-  { value: 'create', label: 'Yaratish' },
-  { value: 'update', label: 'Tahrirlash' },
-  { value: 'delete', label: "O'chirish" },
-  { value: 'login', label: 'Kirish' },
-  { value: 'logout', label: 'Chiqish' },
+  { value: 'auth', label: 'Kirish/Chiqish' },
+  { value: 'student', label: "O'quvchi" },
+  { value: 'group', label: 'Guruh' },
   { value: 'payment', label: "To'lov" },
   { value: 'expense', label: 'Xarajat' },
   { value: 'attendance', label: 'Davomat' },
+  { value: 'user', label: 'Foydalanuvchi' },
+  { value: 'system', label: 'Tizim' },
 ]
 
 const ACTION_COLORS = {
-  create: 'text-emerald-600 dark:text-emerald-400',
-  update: 'text-blue-600 dark:text-blue-400',
-  delete: 'text-red-600 dark:text-red-400',
-  login: 'text-green-600 dark:text-green-400',
-  logout: 'text-gray-600 dark:text-gray-400',
+  auth: 'text-green-600 dark:text-green-400',
+  student: 'text-emerald-600 dark:text-emerald-400',
+  group: 'text-blue-600 dark:text-blue-400',
   payment: 'text-purple-600 dark:text-purple-400',
   expense: 'text-orange-600 dark:text-orange-400',
   attendance: 'text-yellow-600 dark:text-yellow-400',
+  user: 'text-indigo-600 dark:text-indigo-400',
+  system: 'text-red-600 dark:text-red-400',
 }
 
 const ACTION_BADGE = {
-  create: 'badge_green',
-  update: 'badge_blue',
-  delete: 'badge_red',
-  login: 'badge_green',
-  logout: 'badge',
+  auth: 'badge_green',
+  student: 'badge_green',
+  group: 'badge_blue',
   payment: 'badge_purple',
   expense: 'badge_yellow',
   attendance: 'badge_yellow',
+  user: 'badge_blue',
+  system: 'badge_red',
 }
 
 const ROLE_BADGE = {
@@ -48,9 +48,10 @@ const ROLE_BADGE = {
 }
 
 const ROW_BG = {
-  create: 'bg-emerald-50/30 dark:bg-emerald-950/10',
-  delete: 'bg-red-50/30 dark:bg-red-950/10',
+  student: 'bg-emerald-50/30 dark:bg-emerald-950/10',
   payment: 'bg-purple-50/30 dark:bg-purple-950/10',
+  expense: 'bg-orange-50/30 dark:bg-orange-950/10',
+  system: 'bg-red-50/30 dark:bg-red-950/10',
 }
 
 function formatDate(dateStr) {
@@ -214,7 +215,7 @@ export default function AuditLogs() {
                 filtered.map((log, idx) => (
                   <tr
                     key={log.id || idx}
-                    className={`border-b border-gray-100 dark:border-gray-800 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/30 ${ROW_BG[log.action] || ''}`}
+                    className={`border-b border-gray-100 dark:border-gray-800 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/30 ${ROW_BG[log.type] || ''}`}
                   >
                     <td className="py-3 px-4 text-gray-600 dark:text-gray-400 whitespace-nowrap text-xs" title={formatDate(log.createdAt)}>
                       {getRelativeTime(log.createdAt)}
@@ -231,8 +232,8 @@ export default function AuditLogs() {
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`font-medium capitalize ${ACTION_COLORS[log.action] || 'text-gray-600 dark:text-gray-400'}`}>
-                        {ACTION_TYPES.find(a => a.value === log.action)?.label || log.action || '—'}
+                      <span className={`font-medium capitalize ${ACTION_COLORS[log.type] || 'text-gray-600 dark:text-gray-400'}`}>
+                        {ACTION_TYPES.find(a => a.value === log.type)?.label || log.action || '—'}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-gray-600 dark:text-gray-400 max-w-xs truncate">{log.details || '—'}</td>

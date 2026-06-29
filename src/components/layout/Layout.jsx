@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import { motion } from 'framer-motion'
@@ -16,6 +16,12 @@ const Reports = lazy(() => import('../reports/Reports'))
 const Audit = lazy(() => import('../audit/AuditLogs'))
 const Notifications = lazy(() => import('../notifications/NotificationPage'))
 const Settings = lazy(() => import('../settings/Settings'))
+
+const ROLE_PAGES = {
+  superadmin: ['dashboard', 'groups', 'students', 'payments', 'expenses', 'attendance', 'teachers', 'reports', 'audit', 'notifications', 'settings'],
+  admin: ['dashboard', 'groups', 'students', 'payments', 'expenses', 'attendance', 'teachers', 'reports', 'audit', 'notifications'],
+  teacher: ['dashboard', 'attendance'],
+}
 
 function PageFallback({ title }) {
   return (
@@ -56,12 +62,19 @@ const pageTitles = {
 
 export default function Layout() {
   const { user } = useAuth()
-  const { state } = useApp()
+  const { state, dispatch } = useApp()
   const { currentPage = 'dashboard', sidebarOpen } = state
 
   if (!user) return null
 
-  const PageComponent = pages[currentPage]
+  const allowedPages = ROLE_PAGES[user.role] || ROLE_PAGES.teacher
+  const safePage = allowedPages.includes(currentPage) ? currentPage : 'dashboard'
+
+  useEffect(() => {
+    if (safePage !== currentPage) dispatch({ type: 'SET_PAGE', payload: safePage })
+  }, [safePage, currentPage, dispatch])
+
+  const PageComponent = pages[safePage]
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">

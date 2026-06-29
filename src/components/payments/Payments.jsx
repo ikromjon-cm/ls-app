@@ -307,7 +307,7 @@ export default function Payments() {
                       >
                         <td className="py-3 px-4 text-gray-600 dark:text-gray-400 whitespace-nowrap">{formatDate(payment.date)}</td>
                         <td className="py-3 px-4 font-medium text-gray-900 dark:text-white">{payment.studentName || '—'}</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{payment.groupName || '—'}</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{(() => { const s = students.find(st => st.id === payment.studentId); const g = s ? groups.find(gr => gr.id === s.groupId) : null; return g?.name || payment.groupName || '—' })()}</td>
                         <td className="py-3 px-4 text-right font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{formatCurrency(payment.amount)}</td>
                         <td className="py-3 px-4">
                           <span className={METHOD_BADGE[payment.method] || 'badge_blue'}>{payment.method || '—'}</span>

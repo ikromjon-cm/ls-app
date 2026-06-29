@@ -107,13 +107,17 @@ app.get('/api/students', (req, res) => {
 
 app.post('/api/students', authorize('superadmin', 'admin'), upload.single('avatar'), (req, res) => {
   const data = req.body
+  if (data.groupId) data.groupId = Number(data.groupId)
   if (req.file) data.avatar = `/uploads/${req.file.filename}`
   const s = db.createStudent({ ...data, createdBy: req.user.id, createdByName: req.user.name, createdByRole: req.user.role })
   res.status(201).json(s)
 })
 
-app.put('/api/students/:id', authorize('superadmin', 'admin'), (req, res) => {
-  const s = db.updateStudent(Number(req.params.id), req.body)
+app.put('/api/students/:id', authorize('superadmin', 'admin'), upload.single('avatar'), (req, res) => {
+  const data = req.body
+  if (data.groupId) data.groupId = Number(data.groupId)
+  if (req.file) data.avatar = `/uploads/${req.file.filename}`
+  const s = db.updateStudent(Number(req.params.id), data)
   if (!s) return res.status(404).json({ error: 'Student not found' })
   res.json(s)
 })
@@ -142,11 +146,11 @@ app.delete('/api/expenses/:id', authorize('superadmin', 'admin'), (req, res) => 
 })
 
 // ───── Attendance ─────
-app.post('/api/attendance', (req, res) => {
+app.post('/api/attendance', authorize('superadmin', 'admin', 'teacher'), (req, res) => {
   const a = db.markAttendance({ ...req.body, markedBy: req.user.id, markedByName: req.user.name, markedByRole: req.user.role })
   res.json(a)
 })
-app.get('/api/attendance', (req, res) => res.json(db.getAttendance(req.query)))
+app.get('/api/attendance', authorize('superadmin', 'admin', 'teacher'), (req, res) => res.json(db.getAttendance(req.query)))
 
 // ───── Audit Logs ─────
 app.get('/api/audit-logs', authorize('superadmin'), (req, res) => res.json(db.getAuditLogs(req.query)))

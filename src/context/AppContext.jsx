@@ -17,6 +17,7 @@ const initialState = {
   unreadCount: 0,
   auditLogs: [],
   reports: [],
+  users: [],
   loading: true,
   error: null,
 }
@@ -24,9 +25,9 @@ const initialState = {
 function reducer(state, action) {
   switch (action.type) {
     case 'SET_INITIAL':
-      return { ...state, ...action.data, loading: false }
+      return { ...state, ...action.data, unreadCount: action.data.notifications ? action.data.notifications.filter(n => !n.read).length : state.unreadCount, loading: false }
     case 'REFRESH_DATA':
-      return { ...state, ...action.data }
+      return { ...state, ...action.data, unreadCount: action.data.notifications ? action.data.notifications.filter(n => !n.read).length : state.unreadCount }
     case 'SET_PAGE':
       return { ...state, currentPage: action.payload }
     case 'SET_THEME':
@@ -81,11 +82,11 @@ export function AppProvider({ children }) {
 
   const loadInitial = useCallback(async () => {
     try {
-      const [groups, students, payments, expenses, stats, notifications] = await Promise.all([
+      const [groups, students, payments, expenses, stats, notifications, users] = await Promise.all([
         api.getGroups(), api.getStudents({}), api.getPayments({}),
-        api.getExpenses({}), api.getDashboard(), api.getNotifications(),
+        api.getExpenses({}), api.getDashboard(), api.getNotifications(), api.getUsers(),
       ])
-      dispatch({ type: 'SET_INITIAL', data: { groups, students, payments, expenses, stats, notifications } })
+      dispatch({ type: 'SET_INITIAL', data: { groups, students, payments, expenses, stats, notifications, users } })
     } catch (err) {
       dispatch({ type: 'SET_ERROR', error: err.message })
     }
