@@ -315,12 +315,15 @@ export function createStudent(data) {
 
   // Auto-create parent account
   if (data.parentLogin && data.parentPassword) {
-    if (!db.users.find(u => u.login === data.parentLogin)) {
+    const existingParent = db.users.find(u => u.login === data.parentLogin)
+    if (existingParent) {
+      parentIds.push(existingParent.id)
+    } else {
       const parentUser = {
         id: nextId('userId'),
         login: data.parentLogin,
         password: bcrypt.hashSync(data.parentPassword, 10),
-        name: data.parentName || data.parentName || 'Ota-ona',
+        name: data.parentName || 'Ota-ona',
         role: 'parent',
         phone: data.parentPhone || '',
         createdAt: getNow(), updatedAt: getNow(),
