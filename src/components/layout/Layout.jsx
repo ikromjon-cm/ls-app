@@ -1,9 +1,13 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
+import { useAppStore } from '../../store'
+import { useKeyboardShortcuts } from '../../hooks'
 import { motion } from 'framer-motion'
 import Navbar from './Navbar'
 import Sidebar from './Sidebar'
+import CommandPalette from '../ui/CommandPalette'
+import GlobalSearch from '../ui/GlobalSearch'
 
 const Dashboard = lazy(() => import('../dashboard/Dashboard'))
 const Groups = lazy(() => import('../groups/Groups'))
@@ -88,6 +92,17 @@ export default function Layout() {
   const { user } = useAuth()
   const { state, dispatch } = useApp()
   const { currentPage = 'dashboard', sidebarOpen } = state
+  const { commandPaletteOpen, setCommandPaletteOpen, setCurrentPage } = useAppStore()
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false)
+
+  useKeyboardShortcuts([
+    { key: 'k', meta: true, action: () => setCommandPaletteOpen(!commandPaletteOpen) },
+    { key: 'k', ctrl: true, action: () => setCommandPaletteOpen(!commandPaletteOpen) },
+    { key: '/', ctrl: true, action: () => setGlobalSearchOpen(true) },
+    { key: '/', meta: true, action: () => setGlobalSearchOpen(true) },
+    { key: 'b', ctrl: true, action: () => dispatch({ type: 'SET_SIDEBAR', open: !sidebarOpen }) },
+    { key: 'b', meta: true, action: () => dispatch({ type: 'SET_SIDEBAR', open: !sidebarOpen }) },
+  ])
 
   if (!user) return null
 
@@ -102,7 +117,9 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar />
+      <CommandPalette />
+      <GlobalSearch open={globalSearchOpen} onClose={() => setGlobalSearchOpen(false)} />
+      <Navbar onSearchClick={() => setGlobalSearchOpen(true)} />
       <div className="flex pt-16 min-h-[calc(100vh-4rem)]">
         <Sidebar />
         <main
