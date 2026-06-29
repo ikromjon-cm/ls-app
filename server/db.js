@@ -312,6 +312,8 @@ export function getStudents(filters = {}) {
 export function createStudent(data) {
   const db = getDB()
   const parentIds = []
+  const existing = db.students.find(s => s.phone === data.phone)
+  if (existing) return existing
 
   // Auto-create parent account
   if (data.parentLogin && data.parentPassword) {
@@ -368,7 +370,9 @@ export function createStudent(data) {
     const parent = db.users.find(u => u.id === pid)
     if (parent) {
       parent.childIds = parent.childIds || []
-      parent.childIds.push(student.id)
+      if (!parent.childIds.includes(student.id)) {
+        parent.childIds.push(student.id)
+      }
     }
   }
 
