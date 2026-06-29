@@ -44,23 +44,23 @@ class OpenCodeCRMApp extends StatelessWidget {
         final args = settings.arguments;
         switch (settings.name) {
           case '/splash':
-            return MaterialPageRoute(builder: (_) => const SplashScreen());
+            return MaterialPageRoute(builder: (_) => SplashScreen());
           case '/login':
-            return MaterialPageRoute(builder: (_) => const LoginScreen());
+            return MaterialPageRoute(builder: (_) => LoginScreen());
           case '/home':
-            return MaterialPageRoute(builder: (_) => const HomeScreen());
+            return MaterialPageRoute(builder: (_) => HomeScreen());
           case '/student-home':
-            return MaterialPageRoute(builder: (_) => const StudentHomeScreen());
+            return MaterialPageRoute(builder: (_) => StudentHomeScreen());
           case '/notifications':
-            return MaterialPageRoute(builder: (_) => const ParentNotificationsScreen());
+            return MaterialPageRoute(builder: (_) => ParentNotificationsScreen());
           case '/children':
-            return MaterialPageRoute(builder: (_) => const ParentChildrenScreen());
+            return MaterialPageRoute(builder: (_) => ParentChildrenScreen());
           case '/payments':
-            return MaterialPageRoute(builder: (_) => const ParentPaymentsScreen());
+            return MaterialPageRoute(builder: (_) => ParentPaymentsScreen());
           case '/chat':
             return MaterialPageRoute(builder: (_) => ParentChatScreen());
           case '/dashboard':
-            return MaterialPageRoute(builder: (_) => const ParentDashboardScreen());
+            return MaterialPageRoute(builder: (_) => ParentDashboardScreen());
           case '/child':
             return MaterialPageRoute(builder: (_) => ChildDetailScreen(child: args as Map<String, dynamic>));
           default:
