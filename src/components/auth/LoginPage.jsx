@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { useApp } from '../../context/AppContext'
 import { motion } from 'framer-motion'
 import { LogIn, User, Lock, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
   const { login, error, loading: authLoading } = useAuth()
+  const { refreshAll } = useApp()
   const [loginField, setLoginField] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -27,6 +29,7 @@ export default function LoginPage() {
     }
     try {
       await login(loginField.trim(), password)
+      refreshAll()
     } catch {
       // error is set by AuthContext
     }

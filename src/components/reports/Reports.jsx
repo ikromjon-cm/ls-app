@@ -39,10 +39,10 @@ export default function Reports() {
   }, [year, refreshReports])
 
   const chartData = useMemo(() => {
-    if (!reports || !reports.monthly) return []
+    if (!Array.isArray(reports) || reports.length === 0) return []
     const months = []
     for (let i = 0; i < 12; i++) {
-      const m = reports.monthly.find(r => r.month === i + 1)
+      const m = reports.find(r => r.month === i + 1)
       months.push({
         name: MONTHS[i],
         revenue: m?.revenue || 0,
@@ -56,8 +56,10 @@ export default function Reports() {
   }, [reports])
 
   const summary = useMemo(() => {
-    if (!reports || !reports.summary) return { totalRevenue: 0, totalExpense: 0, totalProfit: 0 }
-    return reports.summary
+    if (!Array.isArray(reports) || reports.length === 0) return { totalRevenue: 0, totalExpense: 0, totalProfit: 0 }
+    const totalRevenue = reports.reduce((s, r) => s + (r.revenue || 0), 0)
+    const totalExpense = reports.reduce((s, r) => s + (r.expense || 0), 0)
+    return { totalRevenue, totalExpense, totalProfit: totalRevenue - totalExpense }
   }, [reports])
 
   function exportCSV() {
