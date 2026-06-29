@@ -152,6 +152,7 @@ export default function Students() {
     setAvatarFile(null)
     reset({
       name: '', gender: '', birthDate: '', phone: '', parentPhone: '', parentName: '',
+      parentLogin: '', parentPassword: '', studentLogin: '', studentPassword: '',
       address: '', school: '', passport: '', course: '', groupId: '',
       startDate: new Date().toISOString().slice(0, 10),
       paymentAmount: '', paymentDate: '', discount: '0', note: '', medicalInfo: '', telegram: '',
@@ -170,6 +171,10 @@ export default function Students() {
       phone: student.phone || '',
       parentPhone: student.parentPhone || '',
       parentName: student.parentName || '',
+      parentLogin: student.parentLogin || '',
+      parentPassword: '',
+      studentLogin: student.studentLogin || '',
+      studentPassword: '',
       address: student.address || '',
       school: student.school || '',
       passport: student.passport || '',
@@ -630,6 +635,30 @@ export default function Students() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Ota-onasi F.I.O</label>
                     <input className="input_field" placeholder="Karimov A." {...register('parentName')} disabled={submitting} />
+                  </div>
+
+                  {/* Parent login */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Ota-ona logini (APK uchun)</label>
+                    <input className="input_field" placeholder="parent_login" {...register('parentLogin')} disabled={submitting} />
+                  </div>
+
+                  {/* Parent password */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Ota-ona paroli (APK uchun)</label>
+                    <input type="password" className="input_field" placeholder="••••••••" {...register('parentPassword')} disabled={submitting} />
+                  </div>
+
+                  {/* Student login */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">O'quvchi logini (APK uchun)</label>
+                    <input className="input_field" placeholder="student_login" {...register('studentLogin')} disabled={submitting} />
+                  </div>
+
+                  {/* Student password */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">O'quvchi paroli (APK uchun)</label>
+                    <input type="password" className="input_field" placeholder="••••••••" {...register('studentPassword')} disabled={submitting} />
                   </div>
 
                   {/* Address */}

@@ -21,6 +21,10 @@ function getDB() {
     db = defaultData()
     write(db)
   }
+  const defaults = defaultData()
+  for (const key of Object.keys(defaults)) {
+    if (db[key] === undefined) db[key] = defaults[key]
+  }
   return db
 }
 
@@ -42,10 +46,20 @@ function defaultData() {
     attendance: [],
     auditLogs: [],
     notifications: [],
+    homework: [],
+    grades: [],
+    schedule: [],
+    messages: [],
+    library: [],
+    exams: [],
+    examResults: [],
+    certificates: [],
+    qrCodes: [],
+    devices: [],
     branches: ['Markaziy filial'],
     courses: ['Frontend', 'Backend', 'IELTS', 'Python', 'Mobile', 'Design'],
     settings: { sessionTimeout: 60, smsEnabled: false, telegramEnabled: false },
-    counters: { userId: 4, studentId: 1, groupId: 1, paymentId: 1, expenseId: 1, attendanceId: 1, auditId: 1, notificationId: 1 },
+    counters: { userId: 4, studentId: 1, groupId: 1, paymentId: 1, expenseId: 1, attendanceId: 1, auditId: 1, notificationId: 1, homeworkId: 1, gradeId: 1, scheduleId: 1, messageId: 1, bookId: 1, examId: 1, examResultId: 1, certificateId: 1, qrId: 1, deviceId: 1 },
   }
 }
 
@@ -98,7 +112,9 @@ export function markNotificationRead(id) {
 
 // ───── Auth ─────
 export function authenticate(login, password) {
-  const user = getDB().users.find(u => u.login === login && u.active)
+  let user = getDB().users.find(u => u.login === login && u.active)
+  if (!user) user = getDB().users.find(u => u.phone === login && u.role === 'parent' && u.active)
+  if (!user) user = getDB().users.find(u => u.phone === login && u.role === 'student' && u.active)
   if (!user) return null
   if (!bcrypt.compareSync(password, user.password)) return null
   const { password: _, ...safe } = user
@@ -295,8 +311,64 @@ export function getStudents(filters = {}) {
 
 export function createStudent(data) {
   const db = getDB()
-  const student = { id: nextId('studentId'), ...data, createdAt: getNow(), updatedAt: getNow() }
+  const parentIds = []
+
+  // Auto-create parent account
+  if (data.parentLogin && data.parentPassword) {
+    if (!db.users.find(u => u.login === data.parentLogin)) {
+      const parentUser = {
+        id: nextId('userId'),
+        login: data.parentLogin,
+        password: bcrypt.hashSync(data.parentPassword, 10),
+        name: data.parentName || data.parentName || 'Ota-ona',
+        role: 'parent',
+        phone: data.parentPhone || '',
+        createdAt: getNow(), updatedAt: getNow(),
+        active: true, avatar: null,
+        childIds: [],
+      }
+      db.users.push(parentUser)
+      parentIds.push(parentUser.id)
+    }
+  }
+
+  // Auto-create student account
+  let studentUserId = null
+  if (data.studentLogin && data.studentPassword) {
+    if (!db.users.find(u => u.login === data.studentLogin)) {
+      const studentUser = {
+        id: nextId('userId'),
+        login: data.studentLogin,
+        password: bcrypt.hashSync(data.studentPassword, 10),
+        name: data.name,
+        role: 'student',
+        phone: data.phone || '',
+        createdAt: getNow(), updatedAt: getNow(),
+        active: true, avatar: null,
+      }
+      db.users.push(studentUser)
+      studentUserId = studentUser.id
+    }
+  }
+
+  const studentData = { ...data }
+  delete studentData.parentLogin
+  delete studentData.parentPassword
+  delete studentData.studentLogin
+  delete studentData.studentPassword
+
+  const student = { id: nextId('studentId'), ...studentData, parentIds, studentUserId, createdAt: getNow(), updatedAt: getNow() }
   db.students.push(student)
+
+  // Update parent user's childIds
+  for (const pid of parentIds) {
+    const parent = db.users.find(u => u.id === pid)
+    if (parent) {
+      parent.childIds = parent.childIds || []
+      parent.childIds.push(student.id)
+    }
+  }
+
   const group = db.groups.find(g => g.id === data.groupId)
   if (group) {
     group.studentIds = group.studentIds || []
@@ -464,6 +536,375 @@ export function resetDB() {
   const data = defaultData()
   write(data)
   return data
+}
+
+// ───── Homework ─────
+export function getHomework(filters = {}) {
+  const db = getDB()
+  let list = [...db.homework]
+  if (filters.groupId) list = list.filter(h => h.groupId === Number(filters.groupId))
+  if (filters.studentId) {
+    const student = db.students.find(s => s.id === Number(filters.studentId))
+    if (student) list = list.filter(h => h.groupId === student.groupId)
+  }
+  return list.sort((a, b) => b.id - a.id)
+}
+
+export function createHomework(data) {
+  const db = getDB()
+  const hw = { id: nextId('homeworkId'), ...data, createdAt: getNow(), updatedAt: getNow() }
+  db.homework.push(hw)
+  save(db)
+  const group = db.groups.find(g => g.id === hw.groupId)
+  if (group) {
+    for (const sid of (group.studentIds || [])) {
+      const student = db.students.find(s => s.id === sid)
+      if (student) {
+        for (const pid of (student.parentIds || [])) {
+          createNotification({ userId: pid, title: 'Yangi uy vazifasi', message: `${student.name} uchun yangi uy vazifasi: ${hw.title}`, type: 'homework' })
+        }
+      }
+    }
+  }
+  return hw
+}
+
+export function updateHomework(id, data) {
+  const db = getDB()
+  const hw = db.homework.find(h => h.id === id)
+  if (!hw) return null
+  Object.assign(hw, data, { updatedAt: getNow() })
+  save(db)
+  return hw
+}
+
+export function deleteHomework(id) {
+  const db = getDB()
+  const idx = db.homework.findIndex(h => h.id === id)
+  if (idx === -1) return false
+  db.homework.splice(idx, 1)
+  save(db)
+  return true
+}
+
+// ───── Grades ─────
+export function getGrades(filters = {}) {
+  const db = getDB()
+  let list = [...db.grades]
+  if (filters.studentId) list = list.filter(g => g.studentId === Number(filters.studentId))
+  if (filters.groupId) list = list.filter(g => g.groupId === Number(filters.groupId))
+  if (filters.subject) list = list.filter(g => g.subject === filters.subject)
+  return list.sort((a, b) => b.id - a.id)
+}
+
+export function createGrade(data) {
+  const db = getDB()
+  const grade = { id: nextId('gradeId'), ...data, createdAt: getNow() }
+  db.grades.push(grade)
+  save(db)
+  return grade
+}
+
+export function getGradeStats(studentId) {
+  const db = getDB()
+  const grades = db.grades.filter(g => g.studentId === studentId)
+  const subjects = {}
+  for (const g of grades) {
+    if (!subjects[g.subject]) subjects[g.subject] = []
+    subjects[g.subject].push(g.score)
+  }
+  const result = []
+  for (const [subject, scores] of Object.entries(subjects)) {
+    const total = scores.reduce((s, v) => s + v, 0)
+    result.push({ subject, count: scores.length, average: Math.round((total / scores.length) * 10) / 10, scores })
+  }
+  return result
+}
+
+// ───── Schedule ─────
+export function getSchedule(filters = {}) {
+  const db = getDB()
+  let list = [...db.schedule]
+  if (filters.groupId) list = list.filter(s => s.groupId === Number(filters.groupId))
+  if (filters.day) list = list.filter(s => s.day === filters.day)
+  return list.sort((a, b) => a.timeStart.localeCompare(b.timeStart))
+}
+
+export function createSchedule(data) {
+  const db = getDB()
+  const s = { id: nextId('scheduleId'), ...data, createdAt: getNow() }
+  db.schedule.push(s)
+  save(db)
+  return s
+}
+
+export function updateSchedule(id, data) {
+  const db = getDB()
+  const s = db.schedule.find(sch => sch.id === id)
+  if (!s) return null
+  Object.assign(s, data)
+  save(db)
+  return s
+}
+
+export function deleteSchedule(id) {
+  const db = getDB()
+  const idx = db.schedule.findIndex(s => s.id === id)
+  if (idx === -1) return false
+  db.schedule.splice(idx, 1)
+  save(db)
+  return true
+}
+
+// ───── Messages (Chat) ─────
+export function sendMessage(data) {
+  const db = getDB()
+  const msg = { id: nextId('messageId'), ...data, createdAt: getNow(), read: false }
+  db.messages.push(msg)
+  save(db)
+  return msg
+}
+
+export function getMessages(filters = {}) {
+  const db = getDB()
+  let list = [...db.messages]
+  if (filters.parentId && filters.teacherId) {
+    list = list.filter(m =>
+      (m.senderId === Number(filters.parentId) && m.receiverId === Number(filters.teacherId)) ||
+      (m.senderId === Number(filters.teacherId) && m.receiverId === Number(filters.parentId))
+    )
+  }
+  if (filters.studentId) {
+    list = list.filter(m => m.studentId === Number(filters.studentId))
+  }
+  return list.sort((a, b) => a.id - b.id)
+}
+
+export function markMessagesRead(userId, otherId) {
+  const db = getDB()
+  for (const m of db.messages) {
+    if (m.receiverId === userId && m.senderId === otherId) m.read = true
+  }
+  save(db)
+}
+
+// ───── Library ─────
+export function getBooks(filters = {}) {
+  const db = getDB()
+  let list = [...db.library]
+  if (filters.search) {
+    const q = filters.search.toLowerCase()
+    list = list.filter(b => b.title?.toLowerCase().includes(q) || b.author?.toLowerCase().includes(q))
+  }
+  if (filters.category) list = list.filter(b => b.category === filters.category)
+  return list
+}
+
+export function createBook(data) {
+  const db = getDB()
+  const book = { id: nextId('bookId'), ...data, createdAt: getNow() }
+  db.library.push(book)
+  save(db)
+  return book
+}
+
+export function deleteBook(id) {
+  const db = getDB()
+  const idx = db.library.findIndex(b => b.id === id)
+  if (idx === -1) return false
+  db.library.splice(idx, 1)
+  save(db)
+  return true
+}
+
+// ───── Exams ─────
+export function getExams(filters = {}) {
+  const db = getDB()
+  let list = [...db.exams]
+  if (filters.groupId) list = list.filter(e => e.groupId === Number(filters.groupId))
+  if (filters.studentId) {
+    const student = db.students.find(s => s.id === Number(filters.studentId))
+    if (student) list = list.filter(e => e.groupId === student.groupId)
+  }
+  return list.sort((a, b) => b.id - a.id)
+}
+
+export function createExam(data) {
+  const db = getDB()
+  const exam = { id: nextId('examId'), ...data, createdAt: getNow() }
+  db.exams.push(exam)
+  save(db)
+  return exam
+}
+
+export function submitExamResult(data) {
+  const db = getDB()
+  const exam = db.exams.find(e => e.id === data.examId)
+  if (!exam) return null
+  let correct = 0
+  const answers = data.answers || []
+  const questions = exam.questions || []
+  for (let i = 0; i < questions.length; i++) {
+    if (answers[i] === questions[i].correctAnswer) correct++
+  }
+  const score = questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0
+  const result = {
+    id: nextId('examResultId'),
+    examId: data.examId,
+    studentId: data.studentId,
+    examTitle: exam.title,
+    score,
+    correct,
+    total: questions.length,
+    answers,
+    submittedAt: getNow(),
+  }
+  db.examResults.push(result)
+  save(db)
+  return result
+}
+
+export function getExamResults(filters = {}) {
+  const db = getDB()
+  let list = [...db.examResults]
+  if (filters.studentId) list = list.filter(r => r.studentId === Number(filters.studentId))
+  if (filters.examId) list = list.filter(r => r.examId === Number(filters.examId))
+  return list.sort((a, b) => b.id - a.id)
+}
+
+// ───── Certificates ─────
+export function createCertificate(data) {
+  const db = getDB()
+  const cert = { id: nextId('certificateId'), ...data, issuedAt: getNow() }
+  db.certificates.push(cert)
+  save(db)
+  return cert
+}
+
+export function getCertificates(filters = {}) {
+  const db = getDB()
+  let list = [...db.certificates]
+  if (filters.studentId) list = list.filter(c => c.studentId === Number(filters.studentId))
+  return list.sort((a, b) => b.id - a.id)
+}
+
+// ───── QR Attendance ─────
+export function generateQRCode(data) {
+  const db = getDB()
+  const code = { id: nextId('qrId'), ...data, code: Math.random().toString(36).substring(2, 10).toUpperCase(), active: true, createdAt: getNow() }
+  db.qrCodes.push(code)
+  save(db)
+  return code
+}
+
+export function verifyQRCode(code) {
+  const db = getDB()
+  const qr = db.qrCodes.find(q => q.code === code && q.active)
+  if (!qr) return null
+  qr.active = false
+  save(db)
+  return qr
+}
+
+// ───── Parent Dashboard ─────
+export function getParentChildren(parentId) {
+  const db = getDB()
+  const parent = db.users.find(u => u.id === parentId && u.role === 'parent')
+  if (!parent) return []
+  const children = db.students.filter(s => (s.parentIds || []).includes(parentId))
+  return children.map(s => {
+    const group = db.groups.find(g => g.id === s.groupId)
+    const today = getToday()
+    const att = db.attendance.find(a => a.studentId === s.id && a.date === today)
+    const monthlyAtt = db.attendance.filter(a => a.studentId === s.id && a.date.startsWith(today.substring(0, 7)))
+    const present = monthlyAtt.filter(a => a.status === 'present').length
+    const total = monthlyAtt.length || 1
+    const debts = db.payments.filter(p => p.studentId === s.id)
+    const totalPaid = debts.reduce((sum, p) => sum + p.amount, 0)
+    return {
+      ...s,
+      groupName: group?.name || 'N/A',
+      teacherName: group ? db.users.find(u => u.id === group.teacherId)?.name || 'N/A' : 'N/A',
+      todayStatus: att?.status || null,
+      attendancePercent: Math.round((present / total) * 100),
+      totalPaid,
+      paymentHistory: debts.slice(-10).reverse(),
+    }
+  })
+}
+
+export function getParentPayments(parentId) {
+  const db = getDB()
+  const children = db.students.filter(s => (s.parentIds || []).includes(parentId))
+  const studentIds = children.map(s => s.id)
+  return db.payments.filter(p => studentIds.includes(p.studentId)).sort((a, b) => b.id - a.id)
+}
+
+// ───── Student Portal ─────
+export function getStudentPortalData(studentId) {
+  const db = getDB()
+  const student = db.students.find(s => s.id === studentId)
+  if (!student) return null
+  const group = db.groups.find(g => g.id === student.groupId)
+  const today = getToday()
+  const attendance = db.attendance.filter(a => a.studentId === studentId)
+  const todayAtt = attendance.find(a => a.date === today)
+  const monthlyAtt = attendance.filter(a => a.date.startsWith(today.substring(0, 7)))
+  const present = monthlyAtt.filter(a => a.status === 'present').length
+  const grades = db.grades.filter(g => g.studentId === studentId)
+  const payments = db.payments.filter(p => p.studentId === studentId)
+  const schedule = db.schedule.filter(s => s.groupId === student.groupId)
+  const homework = db.homework.filter(h => h.groupId === student.groupId)
+  return {
+    student,
+    group: group || null,
+    todayAttendance: todayAtt?.status || null,
+    attendancePercent: monthlyAtt.length > 0 ? Math.round((present / monthlyAtt.length) * 100) : 0,
+    attendanceHistory: attendance.sort((a, b) => b.id - a.id).slice(-30),
+    grades: getGradeStats(studentId),
+    payments: payments.sort((a, b) => b.id - a.id),
+    debt: student.paymentStatus === 'debt',
+    schedule: schedule.sort((a, b) => a.timeStart.localeCompare(b.timeStart)),
+    homework: homework.sort((a, b) => b.id - a.id),
+  }
+}
+
+// ───── Device Tracking (Super Admin) ─────
+export function logDevice(data) {
+  const db = getDB()
+  const existing = db.devices.find(d => d.userId === data.userId)
+  if (existing) {
+    Object.assign(existing, data, { lastActive: getNow() })
+  } else {
+    db.devices.push({ id: nextId('deviceId'), ...data, firstSeen: getNow(), lastActive: getNow() })
+  }
+  save(db)
+}
+
+export function getDevices(filters = {}) {
+  const db = getDB()
+  let list = [...db.devices]
+  if (filters.userId) list = list.filter(d => d.userId === Number(filters.userId))
+  return list.sort((a, b) => b.lastActive?.localeCompare(a.lastActive))
+}
+
+// ───── Parent Auth Login by phone ─────
+export function authenticateParent(phone, password) {
+  const db = getDB()
+  const parent = db.users.find(u => u.phone === phone && u.role === 'parent' && u.active)
+  if (!parent) return null
+  if (!bcrypt.compareSync(password, parent.password)) return null
+  const { password: _, ...safe } = parent
+  return safe
+}
+
+export function authenticateStudent(login, password) {
+  const db = getDB()
+  const student = db.users.find(u => u.login === login && u.role === 'student' && u.active)
+  if (!student) return null
+  if (!bcrypt.compareSync(password, student.password)) return null
+  const { password: _, ...safe } = student
+  return safe
 }
 
 export { getDB, getToday, save }
