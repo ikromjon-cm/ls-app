@@ -9,7 +9,6 @@ export default function Grades() {
   const { user } = useAuth()
   const [grades, setGrades] = useState([])
   const [students, setStudents] = useState([])
-  const [subjects, setSubjects] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
@@ -21,7 +20,6 @@ export default function Grades() {
       setGrades(Array.isArray(g) ? g : [])
       const studentsArr = Array.isArray(s) ? s : []
       setStudents(studentsArr)
-      setSubjects([...new Set(studentsArr.map(st => st.group).filter(Boolean))])
     } catch {} finally { setLoading(false) }
   }, [])
 

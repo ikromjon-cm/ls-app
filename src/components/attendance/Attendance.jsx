@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useApp } from '../../context/AppContext'
 import { api } from '../../api'
-import { motion } from 'framer-motion'
 import {
   CalendarCheck, Users, CheckCircle, XCircle, Clock, AlertTriangle, Percent,
 } from 'lucide-react'

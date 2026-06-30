@@ -13,8 +13,8 @@ export function useKeyboardShortcuts(shortcuts) {
   useEffect(() => {
     function handler(e) {
       for (const { key, ctrl, meta, shift, action } of shortcuts) {
-        const mod = ctrl || meta
-        if ((ctrl ? e.ctrlKey : false || meta ? e.metaKey : false) && e.key.toLowerCase() === key.toLowerCase() && (!shift || e.shiftKey)) {
+        const pressed = (ctrl && e.ctrlKey) || (meta && e.metaKey)
+        if (pressed && e.key.toLowerCase() === key.toLowerCase() && (!shift || e.shiftKey)) {
           e.preventDefault()
           action(e)
           return

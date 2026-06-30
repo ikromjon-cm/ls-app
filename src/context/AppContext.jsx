@@ -32,6 +32,8 @@ function reducer(state, action) {
       return { ...state, currentPage: action.payload }
     case 'SET_THEME':
       return { ...state, theme: action.theme }
+    case 'SET_SIDEBAR':
+      return { ...state, sidebarOpen: action.open }
     case 'TOGGLE_SIDEBAR':
       return { ...state, sidebarOpen: !state.sidebarOpen }
     case 'SET_LOADING':

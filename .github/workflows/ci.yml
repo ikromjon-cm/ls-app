@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opencode_crm
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - working-directory: server
+        run: |
+          npm ci
+          npx prisma generate
+          npx prisma migrate deploy
+      - working-directory: server
+        run: npx tsc --noEmit
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opencode_crm
+          DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@localhost:5432/opencode_crm
+          JWT_SECRET: ci-jwt-secret-key-must-be-at-least-32-chars-long
+          JWT_REFRESH_SECRET: ci-refresh-secret-key-must-be-at-least-32-chars
+          SESSION_SECRET: ci-session-secret-key-must-be-at-least-32-chars
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
+          JWT_SECRET: test-secret-key-for-jwt-must-be-at-least-32-characters-long
+          JWT_REFRESH_SECRET: test-refresh-secret-key-must-be-at-least-32-characters-long
+          SESSION_SECRET: test-session-secret-must-be-at-least-32-characters-long
+          REDIS_URL: redis://localhost:6379
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build

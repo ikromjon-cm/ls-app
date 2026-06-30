@@ -4,13 +4,13 @@ import { useApp } from '../../context/AppContext'
 import { useAppStore } from '../../store'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Menu, Sun, Moon, Bell, LogOut, User, ChevronDown, X, Search, Command,
+  Search, Command, Sun, Moon, Bell, LogOut, ChevronDown, Plus,
 } from 'lucide-react'
 
 const pageTitles = {
-  dashboard: 'Dashboard', groups: 'Guruhlar', students: "O'quvchilar",
+  dashboard: 'Dashboard', groups: 'Guruhlar', students: "Talabalar",
   payments: "To'lovlar", expenses: 'Xarajatlar', attendance: 'Davomat',
-  teachers: "O'qituvchilar", reports: 'Hisobotlar', audit: 'Audit Log',
+  teachers: "O'qituvchilar", reports: 'Hisobotlar', audit: 'Audit',
   notifications: 'Xabarnomalar', settings: 'Sozlamalar', chat: 'Xabarlar',
   homework: 'Topshiriqlar', grades: 'Baholar', schedule: 'Dars jadvali',
   library: 'Kutubxona', exams: 'Imtihonlar', certificates: 'Sertifikatlar',
@@ -43,126 +43,161 @@ export default function Navbar({ onSearchClick }) {
 
   const title = pageTitles[currentPage] || 'Dashboard'
 
-  return (
-    <nav className="fixed top-0 left-0 right-0 z-40 h-16 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800">
-      <div className="h-full px-4 lg:px-6 flex items-center justify-between gap-4">
-        {/* Left side */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => dispatch({ type: 'SET_SIDEBAR', open: !sidebarOpen })}
-            className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <div className="hidden sm:block">
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h1>
-          </div>
-        </div>
+  const breadcrumbs = [
+    { label: 'Dashboard', page: 'dashboard' },
+    ...(currentPage !== 'dashboard' ? [{ label: title, page: currentPage }] : []),
+  ]
 
-        {/* Center - Search */}
+  return (
+    <header className="glass-effect fixed top-0 right-0 left-0 md:left-[80px] z-20 h-[72px] px-4 md:px-6 lg:px-8 flex items-center justify-between gap-4 transition-all duration-300">
+      <div className="flex items-center gap-4">
+        <button
+          onClick={() => dispatch({ type: 'SET_SIDEBAR', open: !sidebarOpen })}
+          className="md:hidden p-2 rounded-xl text-[#71717A] dark:text-[#A1A1AA] hover:bg-[#F4F4F5] dark:hover:bg-[#27272A] transition-colors"
+          aria-label="Yon panel"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <nav className="flex items-center gap-1.5 text-sm">
+          {breadcrumbs.map((crumb, i) => (
+            <span key={crumb.page} className="flex items-center gap-1.5">
+              {i > 0 && <span className="text-[#D4D4D8] dark:text-[#3F3F46]">/</span>}
+              <button
+                onClick={() => dispatch({ type: 'SET_PAGE', payload: crumb.page })}
+                className={`hover:text-[#18181B] dark:hover:text-[#FAFAFA] transition-colors ${
+                  i === breadcrumbs.length - 1
+                    ? 'text-[#18181B] dark:text-[#FAFAFA] font-medium'
+                    : 'text-[#71717A] dark:text-[#A1A1AA]'
+                }`}
+              >
+                {crumb.label}
+              </button>
+            </span>
+          ))}
+        </nav>
+      </div>
+
+      <div className="flex items-center gap-2">
         <button
           onClick={onSearchClick}
-          className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all w-64 lg:w-80"
+          className="hidden md:flex items-center gap-2 px-3 py-2 rounded-2xl bg-[#F4F4F5] dark:bg-[#27272A] text-[#71717A] dark:text-[#A1A1AA] hover:bg-[#E4E4E7] dark:hover:bg-[#3F3F46] transition-all w-56 lg:w-64 text-sm"
         >
           <Search className="w-4 h-4" />
-          <span className="flex-1 text-left text-sm">Qidirish...</span>
-          <kbd className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 rounded">
-            <Command className="w-2.5 h-2.5" />/
+          <span className="flex-1 text-left">Qidirish...</span>
+          <kbd className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] bg-white dark:bg-[#18181B] rounded-lg border border-[#E4E4E7] dark:border-[#3F3F46]">
+            <Command className="w-2.5 h-2.5" />K
           </kbd>
         </button>
 
-        {/* Right side */}
-        <div className="flex items-center gap-2">
-          {/* Keyboard shortcut hint */}
+        <button
+          onClick={() => setCommandPaletteOpen(true)}
+          className="md:hidden p-2 rounded-xl text-[#71717A] dark:text-[#A1A1AA] hover:bg-[#F4F4F5] dark:hover:bg-[#27272A] transition-colors"
+          aria-label="Buyruqlar"
+        >
+          <Command className="w-5 h-5" />
+        </button>
+
+        <button
+          onClick={toggleTheme}
+          className="p-2.5 rounded-2xl text-[#71717A] dark:text-[#A1A1AA] hover:bg-[#F4F4F5] dark:hover:bg-[#27272A] transition-colors"
+          aria-label="Tema"
+        >
+          {theme === 'dark' ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
+        </button>
+
+        <div className="relative" ref={notifRef}>
           <button
-            onClick={() => setCommandPaletteOpen(true)}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            onClick={() => setShowNotifications(!showNotifications)}
+            className="p-2.5 rounded-2xl text-[#71717A] dark:text-[#A1A1AA] hover:bg-[#F4F4F5] dark:hover:bg-[#27272A] transition-colors relative"
+            aria-label="Xabarnomalar"
           >
-            <Command className="w-3 h-3" />K
+            <Bell className="w-[18px] h-[18px]" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center shadow-sm">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
+          <AnimatePresence>
+            {showNotifications && (
+              <motion.div
+                initial={{ opacity: 0, y: -4, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                transition={{ duration: 0.15 }}
+                className="absolute right-0 mt-2 w-80 modal-glass rounded-3xl shadow-soft-xl max-h-96 overflow-y-auto"
+              >
+                <div className="p-4 border-b border-[#E4E4E7] dark:border-[#27272A]">
+                  <p className="text-sm font-semibold text-[#18181B] dark:text-[#FAFAFA]">Xabarnomalar</p>
+                </div>
+                {(!notifications || notifications.length === 0) ? (
+                  <div className="p-6 text-center text-sm text-[#71717A] dark:text-[#A1A1AA]">
+                    Xabarnomalar mavjud emas
+                  </div>
+                ) : (
+                  notifications.slice(0, 10).map((n) => (
+                    <button
+                      key={n.id}
+                      onClick={() => markAsRead(n.id)}
+                      className={`w-full text-left px-4 py-3 border-b border-[#F4F4F5] dark:border-[#27272A]/50 hover:bg-[#F4F4F5] dark:hover:bg-[#27272A]/50 transition-colors ${
+                        !n.read ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''
+                      }`}
+                    >
+                      <p className="text-sm font-medium text-[#18181B] dark:text-[#FAFAFA]">{n.title}</p>
+                      <p className="text-xs text-[#71717A] dark:text-[#A1A1AA] mt-0.5">{n.message}</p>
+                      <p className="text-[10px] text-[#A1A1AA] dark:text-[#52525B] mt-1">
+                        {new Date(n.createdAt).toLocaleString('uz-UZ')}
+                      </p>
+                    </button>
+                  ))
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
-          {/* Theme toggle */}
-          <button onClick={toggleTheme} className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        <div className="relative" ref={userMenuRef}>
+          <button
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            className="flex items-center gap-2 px-2 py-1.5 rounded-2xl hover:bg-[#F4F4F5] dark:hover:bg-[#27272A] transition-colors"
+          >
+            <div className="w-[30px] h-[30px] rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+              {user?.name?.charAt(0)?.toUpperCase() || '?'}
+            </div>
+            <div className="hidden lg:block text-left">
+              <p className="text-sm font-medium text-[#18181B] dark:text-[#FAFAFA] leading-tight">{user?.name || 'User'}</p>
+              <p className="text-[10px] text-[#71717A] dark:text-[#A1A1AA] capitalize">{user?.role?.replace('_', ' ') || ''}</p>
+            </div>
+            <ChevronDown className="w-3.5 h-3.5 text-[#71717A] dark:text-[#A1A1AA]" />
           </button>
-
-          {/* Notifications */}
-          <div className="relative" ref={notifRef}>
-            <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative"
-            >
-              <Bell className="w-5 h-5" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow-lg">{unreadCount > 9 ? '9+' : unreadCount}</span>
-              )}
-            </button>
-            <AnimatePresence>
-              {showNotifications && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                  className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 max-h-96 overflow-y-auto"
+          <AnimatePresence>
+            {showUserMenu && (
+              <motion.div
+                initial={{ opacity: 0, y: -4, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                transition={{ duration: 0.15 }}
+                className="absolute right-0 mt-2 w-56 modal-glass rounded-3xl shadow-soft-xl overflow-hidden"
+              >
+                <div className="px-4 py-3 border-b border-[#E4E4E7] dark:border-[#27272A]">
+                  <p className="text-sm font-medium text-[#18181B] dark:text-[#FAFAFA]">{user?.name}</p>
+                  <p className="text-xs text-[#71717A] dark:text-[#A1A1AA]">{user?.email || user?.login}</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 >
-                  <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                    <p className="font-semibold text-gray-900 dark:text-white">Xabarnomalar</p>
-                  </div>
-                  {(!notifications || notifications.length === 0) ? (
-                    <div className="p-6 text-center text-sm text-gray-400">Xabarnomalar mavjud emas</div>
-                  ) : (
-                    notifications.slice(0, 10).map((n) => (
-                      <button
-                        key={n.id}
-                        onClick={() => markAsRead(n.id)}
-                        className={`w-full text-left px-4 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${!n.read ? 'bg-primary-50/50 dark:bg-primary-900/10' : ''}`}
-                      >
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{n.title}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{n.message}</p>
-                        <p className="text-[10px] text-gray-300 mt-1">{new Date(n.createdAt).toLocaleString('uz-UZ')}</p>
-                      </button>
-                    ))
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* User menu */}
-          <div className="relative" ref={userMenuRef}>
-            <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-sm font-bold shadow-sm">
-                {user?.name?.charAt(0)?.toUpperCase() || '?'}
-              </div>
-              <div className="hidden lg:block text-left">
-                <p className="text-sm font-medium text-gray-900 dark:text-white leading-tight">{user?.name || 'User'}</p>
-                <p className="text-[10px] text-gray-400 capitalize">{user?.role || ''}</p>
-              </div>
-              <ChevronDown className="w-4 h-4 text-gray-400" />
-            </button>
-            <AnimatePresence>
-              {showUserMenu && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                  className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
-                >
-                  <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
-                    <p className="text-xs text-gray-400">{user?.email || user?.login}</p>
-                  </div>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                  >
-                    <LogOut className="w-4 h-4" /> Chiqish
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                  <LogOut className="w-4 h-4" /> Chiqish
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
-    </nav>
+    </header>
   )
 }

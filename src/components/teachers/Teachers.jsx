@@ -5,7 +5,7 @@ import { api } from '../../api'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Edit3, Trash2, Users, Phone, User,
-  BookOpen, LogIn, Key, X, Search,
+  BookOpen, LogIn, Search,
 } from 'lucide-react'
 import PageHeader from '../layout/PageHeader'
 import ConfirmModal from '../common/ConfirmModal'
@@ -79,18 +79,6 @@ export default function Teachers() {
   }, [])
 
   useEffect(() => { loadTeachers() }, [loadTeachers])
-
-  if (!hasRole('admin', 'superadmin')) {
-    return (
-      <div className="card text-center py-16">
-        <div className="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-          <User className="w-8 h-8 text-red-500" />
-        </div>
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Ruxsat yo'q</h3>
-        <p className="text-gray-500 dark:text-gray-400">Bu sahifaga faqat admin va superadminlar kirishi mumkin</p>
-      </div>
-    )
-  }
 
   const filteredTeachers = useMemo(() => {
     if (!search.trim()) return teachers
@@ -198,6 +186,18 @@ export default function Teachers() {
     return m
   }, [groups])
 
+  if (!hasRole('admin', 'superadmin')) {
+    return (
+      <div className="card text-center py-16">
+        <div className="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+          <User className="w-8 h-8 text-red-500" />
+        </div>
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Ruxsat yo'q</h3>
+        <p className="text-gray-500 dark:text-gray-400">Bu sahifaga faqat admin va superadminlar kirishi mumkin</p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <Toast show={toast.show} message={toast.message} type={toast.type} onClose={hideToast} />
@@ -272,12 +272,14 @@ export default function Teachers() {
                   <button
                     onClick={(e) => { e.stopPropagation(); openEditModal(teacher) }}
                     className="w-8 h-8 bg-gray-100 dark:bg-gray-800 hover:bg-primary-100 dark:hover:bg-primary-900/40 rounded-lg flex items-center justify-center text-gray-500 hover:text-primary-600 transition-colors"
+                    aria-label="Tahrirlash"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); setConfirmDelete(teacher) }}
                     className="w-8 h-8 bg-gray-100 dark:bg-gray-800 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg flex items-center justify-center text-gray-500 hover:text-red-600 transition-colors"
+                    aria-label="O'chirish"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -365,13 +367,14 @@ export default function Teachers() {
               exit={{ opacity: 0, y: 40, scale: 0.95 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg p-6 md:p-8"
+              role="dialog" aria-modal="true"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                   {editingTeacher ? "O'qituvchini tahrirlash" : "Yangi o'qituvchi qo'shish"}
                 </h2>
-                <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl leading-none">&times;</button>
+                <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl leading-none" aria-label="Yopish">&times;</button>
               </div>
 
               <form onSubmit={handleFormSubmit} className="space-y-4">

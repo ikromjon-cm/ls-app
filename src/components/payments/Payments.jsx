@@ -46,7 +46,7 @@ function Toast({ show, message, type, onClose }) {
 
 export default function Payments() {
   const { state, dispatch } = useApp()
-  const { payments: rawPayments, students, groups, stats } = state
+  const { payments: rawPayments, students, groups } = state
 
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -304,6 +304,9 @@ export default function Payments() {
                       <tr
                         onClick={() => toggleExpand(payment)}
                         className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors cursor-pointer"
+                        tabIndex={0}
+                        role="button"
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleExpand(payment) } }}
                       >
                         <td className="py-3 px-4 text-gray-600 dark:text-gray-400 whitespace-nowrap">{formatDate(payment.date)}</td>
                         <td className="py-3 px-4 font-medium text-gray-900 dark:text-white">{payment.studentName || '—'}</td>
@@ -404,11 +407,12 @@ export default function Payments() {
               exit={{ opacity: 0, y: 40, scale: 0.95 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg p-6 md:p-8"
+              role="dialog" aria-modal="true"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">To'lov qabul qilish</h2>
-                <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl leading-none">&times;</button>
+                <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl leading-none" aria-label="Yopish">&times;</button>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -434,6 +438,7 @@ export default function Payments() {
                         type="button"
                         onClick={() => { setFormStudentId(''); setStudentSearch(''); setFormAmount('') }}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        aria-label="Tozalash"
                       >
                         <X className="w-4 h-4" />
                       </button>

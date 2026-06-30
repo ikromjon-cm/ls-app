@@ -2,9 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import { motion } from 'framer-motion'
-import { LogIn, User, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react'
-
-const GRADIENT_BG = 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 25%, #3b82f6 50%, #6366f1 75%, #8b5cf6 100%)'
+import { User, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react'
 
 export default function LoginPage() {
   const { login, error, loading: authLoading } = useAuth()
@@ -35,63 +33,53 @@ export default function LoginPage() {
   const displayError = localError || error || ''
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center px-4 overflow-hidden bg-gray-50 dark:bg-gray-950">
-      {/* Animated gradient background */}
-      <motion.div
-        className="absolute inset-0 opacity-30 dark:opacity-20"
-        style={{ background: GRADIENT_BG, backgroundSize: '400% 400%' }}
-        animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-        transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
-      />
-      {/* Decorative blobs */}
-      <div className="absolute top-20 left-10 w-72 h-72 bg-primary-400/20 rounded-full blur-3xl" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-500/5 rounded-full blur-3xl" />
+    <div className="min-h-screen relative flex items-center justify-center px-4 overflow-hidden bg-[#FAFAFA] dark:bg-[#09090B]">
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-purple-500/5" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/3 rounded-full blur-3xl" />
 
       <motion.div
-        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        initial={{ opacity: 0, y: 12, scale: 0.99 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="relative w-full max-w-md"
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className="relative w-full max-w-sm"
       >
-        <div className="card_glass shadow-soft-lg">
-          {/* Logo */}
+        <div className="bg-white dark:bg-[#18181B] rounded-3xl shadow-soft-lg border border-[#E4E4E7] dark:border-[#27272A] p-8">
           <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-primary-500/20 mb-4 ring-4 ring-primary-100 dark:ring-primary-900/30">
-              OC
+            <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-md mb-4">
+              L
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">OpenCode CRM</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1.5">
+            <h1 className="text-xl font-semibold text-[#18181B] dark:text-[#FAFAFA]">Lighthouse IT Academy</h1>
+            <p className="text-[#71717A] dark:text-[#A1A1AA] text-sm mt-1">
               Tizimga kirish
             </p>
           </div>
 
-          {/* Error */}
           {displayError && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="mb-4 p-3.5 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300 text-sm flex items-center gap-2.5"
+              className="mb-4 p-3 rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300 text-sm flex items-center gap-2"
             >
-              <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+              <div className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
               {displayError}
             </motion.div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              <label htmlFor="login-field" className="block text-sm font-medium text-[#18181B] dark:text-[#FAFAFA] mb-1.5">
                 Login
               </label>
-              <div className="relative group">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
+              <div className="relative">
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A1A1AA]" />
                 <input
+                  id="login-field"
+                  name="login"
                   type="text"
                   value={loginField}
                   onChange={(e) => setLoginField(e.target.value)}
                   placeholder="Login yoki telefon raqam"
-                  className={`input_field pl-11 ${localError && !loginField.trim() ? 'input_error' : ''}`}
+                  className="input_field pl-10"
                   disabled={authLoading}
                   autoFocus
                   autoComplete="username"
@@ -100,27 +88,30 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              <label htmlFor="password-field" className="block text-sm font-medium text-[#18181B] dark:text-[#FAFAFA] mb-1.5">
                 Parol
               </label>
-              <div className="relative group">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A1A1AA]" />
                 <input
+                  id="password-field"
+                  name="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Parolni kiriting"
-                  className={`input_field pl-11 pr-11 ${localError && !password ? 'input_error' : ''}`}
+                  className="input_field pl-10 pr-10"
                   disabled={authLoading}
                   autoComplete="current-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#A1A1AA] hover:text-[#71717A] transition-colors"
                   tabIndex={-1}
+                  aria-label="Ko'rsatish/Yashirish"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
@@ -128,25 +119,22 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={authLoading}
-              className="btn_primary w-full flex items-center justify-center gap-2 py-3"
+              className="btn_primary w-full flex items-center justify-center gap-2 py-2.5"
             >
               {authLoading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Kirish...
-                </>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
                   Kirish
-                  <ArrowRight className="w-5 h-5" />
+                  <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
-            <p className="text-center text-xs text-gray-400 dark:text-gray-500">
-              &copy; {new Date().getFullYear()} OpenCode CRM. Barcha huquqlar himoyalangan.
+          <div className="mt-6 pt-4 border-t border-[#E4E4E7] dark:border-[#27272A]">
+            <p className="text-center text-[10px] text-[#A1A1AA] dark:text-[#52525B]">
+              &copy; {new Date().getFullYear()} Lighthouse IT Academy. Barcha huquqlar himoyalangan.
             </p>
           </div>
         </div>

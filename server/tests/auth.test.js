@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeAll } from 'vitest'
 import { hashPassword, comparePassword, generateAccessToken, generateRefreshToken, verifyAccessToken, verifyRefreshToken, hasPermission, ROLE_HIERARCHY, generateOTP, generate2FASecret, verify2FAToken } from '../src/core/auth/auth.service.js'
 import { createHmac } from 'crypto'
 

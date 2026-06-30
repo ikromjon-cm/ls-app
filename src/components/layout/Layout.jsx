@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, useCallback } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import { useAppStore } from '../../store'
@@ -6,6 +6,7 @@ import { useKeyboardShortcuts } from '../../hooks'
 import { motion } from 'framer-motion'
 import Navbar from './Navbar'
 import Sidebar from './Sidebar'
+import BottomNav from './BottomNav'
 import CommandPalette from '../ui/CommandPalette'
 import GlobalSearch from '../ui/GlobalSearch'
 
@@ -31,14 +32,16 @@ const PaymentSettings = lazy(() => import('../payments/PaymentSettings'))
 
 const ROLE_PAGES = {
   superadmin: ['dashboard', 'groups', 'students', 'payments', 'expenses', 'attendance', 'teachers', 'reports', 'audit', 'notifications', 'settings', 'chat', 'homework', 'grades', 'schedule', 'library', 'exams', 'certificates', 'payment-settings'],
+  super_admin: ['dashboard', 'groups', 'students', 'payments', 'expenses', 'attendance', 'teachers', 'reports', 'audit', 'notifications', 'settings', 'chat', 'homework', 'grades', 'schedule', 'library', 'exams', 'certificates', 'payment-settings'],
   admin: ['dashboard', 'groups', 'students', 'payments', 'expenses', 'attendance', 'teachers', 'reports', 'audit', 'notifications', 'chat', 'homework', 'grades', 'schedule', 'library', 'exams', 'certificates'],
+  org_admin: ['dashboard', 'groups', 'students', 'payments', 'expenses', 'attendance', 'teachers', 'reports', 'audit', 'notifications', 'chat', 'homework', 'grades', 'schedule', 'library', 'exams', 'certificates'],
   teacher: ['dashboard', 'attendance', 'homework', 'grades', 'schedule', 'chat', 'library', 'exams'],
 }
 
 function PageFallback({ title }) {
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-gray-500">
-      <div className="w-16 h-16 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-4" />
+    <div className="flex flex-col items-center justify-center py-20 text-[#71717A] dark:text-[#A1A1AA]">
+      <div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-3" />
       <p className="text-sm">{title} yuklanmoqda...</p>
     </div>
   )
@@ -69,13 +72,13 @@ const pages = {
 const pageTitles = {
   dashboard: 'Dashboard',
   groups: 'Guruhlar',
-  students: "O'quvchilar",
+  students: "Talabalar",
   payments: "To'lovlar",
   expenses: 'Xarajatlar',
   attendance: 'Davomat',
   teachers: "O'qituvchilar",
   reports: 'Hisobotlar',
-  audit: 'Audit Log',
+  audit: 'Audit',
   notifications: 'Xabarnomalar',
   settings: 'Sozlamalar',
   chat: 'Xabarlar',
@@ -92,7 +95,7 @@ export default function Layout() {
   const { user } = useAuth()
   const { state, dispatch } = useApp()
   const { currentPage = 'dashboard', sidebarOpen } = state
-  const { commandPaletteOpen, setCommandPaletteOpen, setCurrentPage } = useAppStore()
+  const { commandPaletteOpen, setCommandPaletteOpen } = useAppStore()
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false)
 
   useKeyboardShortcuts([
@@ -104,41 +107,43 @@ export default function Layout() {
     { key: 'b', meta: true, action: () => dispatch({ type: 'SET_SIDEBAR', open: !sidebarOpen }) },
   ])
 
+  useEffect(() => {
+    if (!user) return
+    const rolePages = ROLE_PAGES[user.role] || ROLE_PAGES.teacher
+    if (!rolePages.includes(currentPage)) dispatch({ type: 'SET_PAGE', payload: rolePages[0] || 'dashboard' })
+  }, [user, currentPage, dispatch])
+
   if (!user) return null
 
   const allowedPages = ROLE_PAGES[user.role] || ROLE_PAGES.teacher
   const safePage = allowedPages.includes(currentPage) ? currentPage : 'dashboard'
-
-  useEffect(() => {
-    if (safePage !== currentPage) dispatch({ type: 'SET_PAGE', payload: safePage })
-  }, [safePage, currentPage, dispatch])
-
   const PageComponent = pages[safePage]
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#09090B]">
       <CommandPalette />
       <GlobalSearch open={globalSearchOpen} onClose={() => setGlobalSearchOpen(false)} />
+      <Sidebar />
       <Navbar onSearchClick={() => setGlobalSearchOpen(true)} />
-      <div className="flex pt-16 min-h-[calc(100vh-4rem)]">
-        <Sidebar />
-        <main
-          className={`flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 ${
-            sidebarOpen ? 'md:ml-64' : 'md:ml-20'
-          }`}
-        >
-          <Suspense fallback={<PageFallback title={pageTitles[currentPage]} />}>
+      <BottomNav />
+      <main
+        className={`pt-[72px] min-h-screen transition-all duration-300 ${
+          sidebarOpen ? 'md:pl-[280px]' : 'md:pl-[80px]'
+        }`}
+      >
+        <div className="p-4 md:p-6 lg:p-8 max-w-[1440px] mx-auto pb-20 md:pb-8">
+          <Suspense fallback={<PageFallback title={pageTitles[safePage]} />}>
             <motion.div
-              key={currentPage}
-              initial={{ opacity: 0, y: 8 }}
+              key={safePage}
+              initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
             >
               <PageComponent />
             </motion.div>
           </Suspense>
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   )
 }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "19326330248",
+    "project_id": "lighthouse-crm-cc07b",
+    "storage_bucket": "lighthouse-crm-cc07b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:19326330248:android:342765c33d52290b99c63d",
+        "android_client_info": {
+          "package_name": "com.lighthouse.crm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0htAtPJws71evZPye3cBoiBrrMV05F70"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

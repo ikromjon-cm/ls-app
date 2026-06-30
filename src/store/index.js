@@ -63,7 +63,7 @@ export const useAppStore = create((set, get) => ({
   dispatch: (action) => {
     const state = get()
     switch (action.type) {
-      case 'SET_PAGE': set({ currentPage: action.page }); break
+      case 'SET_PAGE': set({ currentPage: action.payload }); break
       case 'SET_SIDEBAR': set({ sidebarOpen: action.open }); break
       case 'ADD_PAYMENT': set({ payments: [action.payment, ...state.payments] }); break
       case 'UPDATE_STUDENT': set({ students: state.students.map(s => s.id === action.student.id ? action.student : s) }); break

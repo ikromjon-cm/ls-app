@@ -26,6 +26,14 @@ export function authorize(...roles) {
   }
 }
 
+export function authorizeRoles(...roles: string[]) {
+  return (req: any, res: any, next: any) => {
+    if (!req.user) return res.status(401).json({ success: false, message: 'Avtorizatsiya talab qilinadi', errors: ['UNAUTHORIZED'] })
+    if (!roles.some(r => hasPermission(req.user.role, r))) return res.status(403).json({ success: false, message: "Ruxsat yo'q", errors: ['FORBIDDEN'] })
+    next()
+  }
+}
+
 export function checkOrganization(req, res, next) {
   if (!req.headers['x-organization-id'] && req.user?.organizationId) {
     req.headers['x-organization-id'] = req.user.organizationId
@@ -33,11 +41,29 @@ export function checkOrganization(req, res, next) {
   next()
 }
 
+function sanitizeValue(value) {
+  if (typeof value === 'string') {
+    return value.replace(/<[^>]*>/g, '').trim()
+  }
+  if (Array.isArray(value)) {
+    return value.map(sanitizeValue)
+  }
+  if (value && typeof value === 'object') {
+    const sanitized = {}
+    for (const key of Object.keys(value)) {
+      sanitized[key] = sanitizeValue(value[key])
+    }
+    return sanitized
+  }
+  return value
+}
+
 export function sanitizeInput(req, _res, next) {
-  if (req.body) {
-    for (const key of Object.keys(req.body)) {
-      if (typeof req.body[key] === 'string') {
-        req.body[key] = req.body[key].replace(/<[^>]*>/g, '').trim()
+  if (req.body) req.body = sanitizeValue(req.body)
+  if (req.query) {
+    for (const key of Object.keys(req.query)) {
+      if (typeof req.query[key] === 'string') {
+        req.query[key] = req.query[key].replace(/<[^>]*>/g, '').trim()
       }
     }
   }

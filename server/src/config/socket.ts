@@ -1,4 +1,3 @@
-import { Server as HttpServer } from 'http'
 import { Server } from 'socket.io'
 import { verifyAccessToken } from '../core/auth/auth.service.js'
 import redis from '../config/redis.js'

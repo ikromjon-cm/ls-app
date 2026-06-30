@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Plus, Edit3, Trash2, ChevronDown, ChevronUp,
-  BookOpen, UserPlus, X, Users,
+  BookOpen, UserPlus, X,
 } from 'lucide-react'
 import PageHeader from '../layout/PageHeader'
 import ConfirmModal from '../common/ConfirmModal'
@@ -347,12 +347,14 @@ export default function Groups() {
                   <button
                     onClick={(e) => { e.stopPropagation(); openEditModal(group) }}
                     className="w-8 h-8 bg-gray-100 dark:bg-gray-800 hover:bg-primary-100 dark:hover:bg-primary-900/40 rounded-lg flex items-center justify-center text-gray-500 hover:text-primary-600 transition-colors"
+                    aria-label="Tahrirlash"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); setConfirmDelete(group) }}
                     className="w-8 h-8 bg-gray-100 dark:bg-gray-800 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg flex items-center justify-center text-gray-500 hover:text-red-600 transition-colors"
+                    aria-label="O'chirish"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -470,6 +472,7 @@ export default function Groups() {
                             <button
                               onClick={() => setInlineForm({ groupId: null, name: '', phone: '' })}
                               className="p-2 text-gray-400 hover:text-gray-600"
+                              aria-label="Bekor qilish"
                             >
                               <X className="w-4 h-4" />
                             </button>
@@ -509,13 +512,14 @@ export default function Groups() {
               exit={{ opacity: 0, y: 40, scale: 0.95 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 md:p-8"
+              role="dialog" aria-modal="true"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                   {editingGroup ? 'Guruhni tahrirlash' : 'Yangi guruh yaratish'}
                 </h2>
-                <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl leading-none">
+                <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl leading-none" aria-label="Yopish">
                   &times;
                 </button>
               </div>

@@ -1,9 +1,7 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useApp } from '../../context/AppContext'
-import { api } from '../../api'
-import { motion } from 'framer-motion'
 import {
-  ScrollText, Search, X, RefreshCw, Shield, User,
+  ScrollText, Search, X, RefreshCw, User,
 } from 'lucide-react'
 import PageHeader from '../layout/PageHeader'
 
@@ -42,7 +40,9 @@ const ACTION_BADGE = {
 }
 
 const ROLE_BADGE = {
+  super_admin: 'badge_red',
   superadmin: 'badge_red',
+  org_admin: 'badge_blue',
   admin: 'badge_blue',
   teacher: 'badge_green',
 }
@@ -127,7 +127,7 @@ export default function AuditLogs() {
 
   const userList = useMemo(() => {
     if (!users) return []
-    return users.filter(u => u.role === 'superadmin' || u.role === 'admin' || u.role === 'teacher')
+    return users.filter(u => ['super_admin', 'org_admin', 'teacher'].includes(u.role))
   }, [users])
 
   return (
@@ -228,7 +228,7 @@ export default function AuditLogs() {
                     </td>
                     <td className="py-3 px-4">
                       <span className={ROLE_BADGE[log.userRole] || 'badge'}>
-                        {log.userRole === 'superadmin' ? 'Super Admin' : log.userRole === 'admin' ? 'Admin' : log.userRole === 'teacher' ? "O'qituvchi" : log.userRole || '—'}
+                        {['super_admin', 'superadmin'].includes(log.userRole) ? 'Super Admin' : ['org_admin', 'admin'].includes(log.userRole) ? 'Admin' : log.userRole === 'teacher' ? "O'qituvchi" : log.userRole || '—'}
                       </span>
                     </td>
                     <td className="py-3 px-4">

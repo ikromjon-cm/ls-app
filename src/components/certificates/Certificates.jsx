@@ -45,6 +45,7 @@ export default function Certificates() {
   )
 
   const typeColors = { completion: 'green', achievement: 'yellow', participation: 'blue' }
+  const borderColors = { completion: 'border-l-green-500', achievement: 'border-l-yellow-500', participation: 'border-l-blue-500' }
   const typeLabels = { completion: 'Tugallagan', achievement: 'Yutuq', participation: 'Ishtirok' }
 
   return (
@@ -110,7 +111,7 @@ export default function Certificates() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((c, i) => (
-            <motion.div key={c.id || i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className={`card group hover:shadow-md transition-all border-l-4 border-l-${typeColors[c.type] || 'primary'}-500`}>
+            <motion.div key={c.id || i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className={`card group hover:shadow-md transition-all border-l-4 ${borderColors[c.type] || 'border-l-indigo-500'}`}>
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
                   <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20">

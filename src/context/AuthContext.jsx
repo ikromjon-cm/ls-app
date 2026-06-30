@@ -81,7 +81,11 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('auth:logout', handler)
   }, [logout])
 
-  const hasRole = (...roles) => state.user && roles.includes(state.user.role)
+  const hasRole = (...roles) => {
+    if (!state.user) return false
+    const normalized = state.user.role.replace('org_admin', 'admin').replace('super_admin', 'superadmin')
+    return roles.includes(state.user.role) || roles.includes(normalized)
+  }
 
   return (
     <AuthContext.Provider value={{ ...state, login, logout, hasRole }}>

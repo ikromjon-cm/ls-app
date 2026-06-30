@@ -1,7 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useApp } from '../../context/AppContext'
-import { api } from '../../api'
-import { motion } from 'framer-motion'
 import {
   BarChart3, TrendingUp, Download, FileText, ChevronDown,
 } from 'lucide-react'

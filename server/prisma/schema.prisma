@@ -1,10 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 // ═══════════════════════════════════════════
@@ -42,6 +44,7 @@ model Organization {
   notifications Notification[]
   branches    OrganizationBranch[]
   courses     OrganizationCourse[]
+  subscription Subscription?
 }
 
 model OrganizationBranch {
@@ -503,7 +506,7 @@ model Subscription {
   id              String   @id @default(cuid())
   organizationId  String   @unique
   plan            String   @default("free")
-  status          String   @default("active") // active, past_due, cancelled, expired
+  status          String   @default("active")
   currentPeriodStart DateTime @default(now())
   currentPeriodEnd   DateTime
   trialEndsAt     DateTime?
@@ -511,4 +514,6 @@ model Subscription {
   paymeId         String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }

@@ -32,12 +32,12 @@ WORKDIR /app
 RUN apk add --no-cache curl openssl
 
 # Copy server
-COPY --from=server-builder /app/server/dist/ dist/
-COPY --from=server-builder /app/server/node_modules/ node_modules/
-COPY --from=server-builder /app/server/prisma/ prisma/
-COPY --from=server-builder /app/server/package.json ./
+COPY --from=server-builder /app/server/dist/ server/dist/
+COPY --from=server-builder /app/server/node_modules/ server/node_modules/
+COPY --from=server-builder /app/server/prisma/ server/prisma/
+COPY --from=server-builder /app/server/package.json server/
 
-# Copy frontend
+# Copy frontend (kept at /app/dist for static serving)
 COPY --from=builder /app/dist/ dist/
 
 ENV NODE_ENV=production
@@ -48,4 +48,4 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:3001/api/health || exit 1
 
-CMD ["node", "dist/index.js"]
+CMD ["node", "server/dist/index.js"]

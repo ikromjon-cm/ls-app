@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../api'
 import { motion } from 'framer-motion'
-import { Send, Search, MessageSquare, UserCheck, Clock } from 'lucide-react'
+import { Send, Search, MessageSquare } from 'lucide-react'
 
 export default function Chat() {
   const { user } = useAuth()
@@ -17,8 +17,6 @@ export default function Chat() {
   const loadContacts = useCallback(async () => {
     try {
       if (user.role === 'parent') {
-        const children = await api.request('/parent/children', {})
-        const teachers = [...new Set((Array.isArray(children) ? children : []).map(c => c.teacherName).filter(Boolean))]
         const users = await api.getUsers('teacher')
         setContacts(Array.isArray(users) ? users : [])
       } else {

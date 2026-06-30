@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Users, GraduationCap, CreditCard, FileText, MessageSquare, X, ArrowRight, Loader2 } from 'lucide-react'
+import { Search, Users, GraduationCap, CreditCard, MessageSquare, X, ArrowRight, Loader2 } from 'lucide-react'
 import { api } from '../../api'
 import { useDebounce } from '../../hooks'
 

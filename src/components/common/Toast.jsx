@@ -1,4 +1,4 @@
-import { useState, useCallback, createContext, useContext } from 'react'
+import { useState, useCallback, createContext, useContext, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react'
 
@@ -19,15 +19,19 @@ export function ToastProvider({ children }) {
     const id = Date.now() + Math.random()
     setToasts(prev => [...prev, { id, message, type }])
     if (duration > 0) {
-      setTimeout(() => {
-        setToasts(prev => prev.filter(t => t.id !== id))
-      }, duration)
+      setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), duration)
     }
   }, [])
 
   const removeToast = useCallback((id) => {
     setToasts(prev => prev.filter(t => t.id !== id))
   }, [])
+
+  useEffect(() => {
+    const handler = (e) => addToast(e.detail?.message || 'Server xatoligi', 'error')
+    window.addEventListener('app:error', handler)
+    return () => window.removeEventListener('app:error', handler)
+  }, [addToast])
 
   return (
     <ToastContext.Provider value={addToast}>
@@ -39,18 +43,15 @@ export function ToastProvider({ children }) {
             return (
               <motion.div
                 key={toast.id}
-                initial={{ opacity: 0, y: -20, x: 20, scale: 0.95 }}
+                initial={{ opacity: 0, y: -8, x: 8, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, x: 20, scale: 0.95 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                className={`${colors[toast.type]} text-white rounded-xl shadow-2xl p-4 flex items-start gap-3 backdrop-blur-sm pointer-events-auto`}
+                exit={{ opacity: 0, y: -8, x: 8, scale: 0.98 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+                className={`${colors[toast.type]} text-white rounded-2xl shadow-soft-lg p-4 flex items-start gap-3 pointer-events-auto`}
               >
-                <Icon className="w-5 h-5 mt-0.5 shrink-0" />
+                <Icon className="w-4 h-4 mt-0.5 shrink-0" />
                 <p className="text-sm flex-1">{toast.message}</p>
-                <button
-                  onClick={() => removeToast(toast.id)}
-                  className="shrink-0 hover:opacity-70 transition-opacity"
-                >
+                <button onClick={() => removeToast(toast.id)} className="shrink-0 hover:opacity-70 transition-opacity">
                   <X className="w-4 h-4" />
                 </button>
               </motion.div>
@@ -69,26 +70,19 @@ export function useToast() {
 }
 
 export default function Toast({ show, message, type = 'info', onClose }) {
-  // Legacy single-toast component
+  useEffect(() => {
+    if (show) { const t = setTimeout(onClose, 3000); return () => clearTimeout(t) }
+  }, [show, onClose])
+  if (!show) return null
   const Icon = icons[type]
+  const bg = colors[type]
   return (
-    <AnimatePresence>
-      {show && (
-        <motion.div
-          initial={{ opacity: 0, y: -20, x: 20 }}
-          animate={{ opacity: 1, y: 0, x: 0 }}
-          exit={{ opacity: 0, y: -20, x: 20 }}
-          className="fixed top-20 right-4 z-50 max-w-sm"
-        >
-          <div className={`${colors[type]} text-white rounded-xl shadow-2xl p-4 flex items-start gap-3 backdrop-blur-sm`}>
-            <Icon className="w-5 h-5 mt-0.5 shrink-0" />
-            <p className="text-sm flex-1">{message}</p>
-            <button onClick={onClose} className="shrink-0 hover:opacity-70">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <div className="fixed top-20 right-4 z-[60]">
+      <div className={`${bg} text-white px-4 py-3 rounded-2xl shadow-soft-lg flex items-center gap-3`}>
+        <Icon className="w-4 h-4" />
+        <span className="font-medium text-sm">{message}</span>
+        <button onClick={onClose} className="ml-1 hover:opacity-70 font-bold text-lg leading-none">&times;</button>
+      </div>
+    </div>
   )
 }

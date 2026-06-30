@@ -14,20 +14,20 @@ export function comparePassword(password, hash) {
 }
 
 export function generateAccessToken(payload: Record<string, any>) {
-  return jwt.sign({ ...payload, type: 'access' }, env.JWT_SECRET, {
+  return jwt.sign({ ...payload, type: 'access', iss: 'opencode-crm', aud: 'opencode-crm-api' }, env.JWT_SECRET, {
     expiresIn: env.JWT_EXPIRES_IN as any,
   })
 }
 
 export function generateRefreshToken(payload: Record<string, any>) {
-  return jwt.sign({ ...payload, type: 'refresh' }, env.JWT_REFRESH_SECRET, {
+  return jwt.sign({ ...payload, type: 'refresh', iss: 'opencode-crm', aud: 'opencode-crm-api' }, env.JWT_REFRESH_SECRET, {
     expiresIn: env.JWT_REFRESH_EXPIRES_IN as any,
   })
 }
 
 export function verifyAccessToken(token: string) {
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET) as Record<string, any>
+    const decoded = jwt.verify(token, env.JWT_SECRET, { issuer: 'opencode-crm', audience: 'opencode-crm-api' }) as Record<string, any>
     if (decoded.type !== 'access') return null
     return decoded
   } catch { return null }
@@ -35,7 +35,7 @@ export function verifyAccessToken(token: string) {
 
 export function verifyRefreshToken(token: string) {
   try {
-    const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET) as Record<string, any>
+    const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET, { issuer: 'opencode-crm', audience: 'opencode-crm-api' }) as Record<string, any>
     if (decoded.type !== 'refresh') return null
     return decoded
   } catch { return null }
