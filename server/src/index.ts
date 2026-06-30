@@ -39,6 +39,9 @@ app.use(helmet({
     },
   },
 }))
+// Healthcheck — must be before rate-limit, auth, etc.
+app.get('/health', (_req, res) => res.json({ success: true, message: 'OK', errors: [] }))
+
 app.use(cors({ origin: env.CORS_ORIGIN, methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], allowedHeaders: ['Content-Type', 'Authorization', 'X-Organization-Id'], credentials: true }))
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 500, standardHeaders: true, legacyHeaders: false, message: { success: false, message: "Ko'p so'rov yuborildi", errors: ['RATE_LIMIT'] } }))
 
