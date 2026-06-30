@@ -29,7 +29,8 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-RUN apk add --no-cache curl openssl
+RUN apk add --no-cache curl openssl && \
+  addgroup -S appgroup && adduser -S appuser -G appgroup
 
 # Copy server
 COPY --from=server-builder /app/server/dist/ server/dist/
@@ -42,6 +43,8 @@ COPY --from=builder /app/dist/ dist/
 
 ENV NODE_ENV=production
 ENV PORT=3001
+
+USER appuser
 
 EXPOSE 3001
 

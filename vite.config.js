@@ -28,5 +28,6 @@ export default defineConfig({
       },
     },
     chunkSizeWarningLimit: 300,
+    sourcemap: false,
   },
 })
