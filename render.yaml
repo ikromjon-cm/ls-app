@@ -44,4 +44,3 @@ redis:
   - name: opencode-crm-redis
     plan: starter
     region: frankfurt
-    maxmemoryPolicy: allkeys-lru
