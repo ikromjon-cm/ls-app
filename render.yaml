@@ -33,14 +33,14 @@ services:
       - key: CORS_ORIGIN
         value: '*'
 
+  - type: redis
+    name: opencode-crm-redis
+    plan: starter
+    region: frankfurt
+
 databases:
   - name: opencode-crm-db
     databaseName: opencode_crm
     plan: starter
     region: frankfurt
     postgresMajorVersion: 16
-
-redis:
-  - name: opencode-crm-redis
-    plan: starter
-    region: frankfurt
