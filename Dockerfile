@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Copy frontend
 COPY package*.json ./
-RUN npm ci
+RUN npm install --ignore-scripts
 
 COPY vite.config.js tailwind.config.js postcss.config.js index.html ./
 COPY src/ src/
@@ -17,7 +17,7 @@ FROM node:22-alpine AS server-builder
 WORKDIR /app/server
 
 COPY server/package*.json ./
-RUN npm ci
+RUN npm install --ignore-scripts
 
 COPY server/tsconfig.json ./
 COPY server/prisma/ prisma/
